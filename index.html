@@ -39,9 +39,9 @@
             width: 30px;
             height: 30px;
             margin-right: 10px;
-            border-radius: 25%; /* Ajustado para criar cantos arredondados */
+            border-radius: 25%;
             overflow: hidden;
-            object-fit: cover; /* Garante que a imagem cubra todo o espaço */
+            object-fit: cover;
         }
         h1 {
             font-size: 1.5em;
@@ -80,7 +80,7 @@
         }
         .game-image-container {
             width: 100%;
-            padding-top: 56.25%; /* Proporção de Aspecto 16:9 */
+            padding-top: 56.25%;
             position: relative;
             overflow: hidden;
         }
@@ -122,23 +122,24 @@
 
     <script>
         const games = [
-            {name: "Pyxel Chess", url: "https://sites.pyxelworld.com/PyxelChess", supports: ["teclado", "mouse"]},
-            {name: "Caça Fantasmas", url: "https://sites.pyxelworld.com/cacafantasmas", supports: ["teclado"]},
-            {name: "Galaxy Invaders", url: "https://sites.pyxelworld.com/galaxyinvaders", supports: ["mouse", "toque"]},
-            {name: "Jogo da Velha", url: "https://sites.pyxelworld.com/jogodavelha", supports: ["teclado", "mouse", "toque"]},
-            {name: "Carro 3d", url: "https://sites.pyxelworld.com/carro3d", supports: ["teclado"]},
-            {name: "Aventura dos Predicados", url: "https://sites.pyxelworld.com/predicados", supports: ["mouse", "toque"]},
-            {name: "Magic Snake", url: "https://sites.pyxelworld.com/magicsnake", supports: ["teclado", "toque"]},
-            {name: "Geomatry Rush", url: "https://sites.pyxelworld.com/geometryrush", supports: ["mouse"]},
-            {name: "Magic Blocks", url: "https://sites.pyxelworld.com/magicblocks", supports: ["teclado", "mouse"]},
-            {name: "Jogo da Idosa", url: "https://sites.pyxelworld.com/jogodaidosa", supports: ["teclado", "toque"]},
-            {name: "Rei da África", url: "https://sites.pyxelworld.com/reidaafrica", supports: ["mouse", "toque"]},
-            {name: "Glue-it!", url: "https://sites.pyxelworld.com/glueit", supports: ["teclado", "mouse", "toque"]},
-            {name: "Carros", url: "https://sites.pyxelworld.com/carros", supports: ["teclado"]},
-            {name: "Flappy Square", url: "https://sites.pyxelworld.com/flappysquare", supports: ["mouse", "toque"]},
-            {name: "Jumping Cat", url: "https://sites.pyxelworld.com/jumpingcat", supports: ["teclado", "mouse", "toque"]},
-            {name: "Hit the Box", url: "https://hitthebox.pyxelworld.com/", supports: ["teclado"]},
-            {name: "Corbos", url: "https://corbos.pyxelworld.com/", supports: ["mouse", "toque"]}
+            {name: "Magic Snake 2", url: "https://sites.pyxelworld.com/magicsnake2", supports: ["mouse", "toque"], image: "magicsnake2.jpg"},
+            {name: "Pyxel Chess", url: "https://sites.pyxelworld.com/pyxelchess", supports: ["teclado", "mouse"], image: "pyxelchess.jpg"},
+            {name: "Caça Fantasmas", url: "https://sites.pyxelworld.com/cacafantasmas", supports: ["teclado"], image: "cacafantasmas.jpg"},
+            {name: "Galaxy Invaders", url: "https://sites.pyxelworld.com/galaxyinvaders", supports: ["mouse", "toque"], image: "galaxyinvaders.jpg"},
+            {name: "Jogo da Velha", url: "https://sites.pyxelworld.com/jogodavelha", supports: ["teclado", "mouse", "toque"], image: "jogodavelha.jpg"},
+            {name: "Carro 3d", url: "https://sites.pyxelworld.com/carro3d", supports: ["teclado"], image: "carro3d.jpg"},
+            {name: "Aventura dos Predicados", url: "https://sites.pyxelworld.com/predicados", supports: ["teclado", "toque"], image: "predicados.jpg"},
+            {name: "Magic Snake", url: "https://sites.pyxelworld.com/magicsnake", supports: ["teclado", "toque"], image: "magicsnake.jpg"},
+            {name: "Geometry Rush", url: "https://sites.pyxelworld.com/geometryrush", supports: ["mouse"], image: "geometryrush.jpg"},
+            {name: "Magic Blocks", url: "https://sites.pyxelworld.com/magicblocks", supports: ["teclado", "mouse"], image: "magicblocks.jpg"},
+            {name: "Jogo da Idosa", url: "https://sites.pyxelworld.com/jogodaidosa", supports: ["teclado", "toque"], image: "jogodaidosa.jpg"},
+            {name: "Rei da África", url: "https://sites.pyxelworld.com/reidaafrica", supports: ["mouse", "toque"], image: "reidaafrica.jpg"},
+            {name: "Glue-it!", url: "https://sites.pyxelworld.com/glueit", supports: ["teclado", "mouse", "toque"], image: "glueit.jpg"},
+            {name: "Carros", url: "https://sites.pyxelworld.com/carros", supports: ["teclado"], image: "carros.jpg"},
+            {name: "Flappy Square", url: "https://sites.pyxelworld.com/flappysquare", supports: ["mouse", "toque"], image: "flappysquare.jpg"},
+            {name: "Jumping Cat", url: "https://sites.pyxelworld.com/jumpingcat", supports: ["teclado", "mouse", "toque"], image: "jumpingcat.jpg"},
+            {name: "Hit the Box", url: "https://hitthebox.pyxelworld.com/", supports: ["teclado"], image: "hitthebox.jpg"},
+            {name: "Corbos", url: "https://corbos.pyxelworld.com/", supports: ["mouse", "toque"], image: "corbos.jpg"}
         ];
 
         const gameGrid = document.getElementById('gameGrid');
@@ -150,7 +151,7 @@
 
             gameCard.innerHTML = `
                 <div class="game-image-container">
-                    <img src="${game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.jpg" alt="${game.name}" class="game-image">
+                    <img src="${game.image}" alt="${game.name}" class="game-image">
                 </div>
                 <div class="game-info">
                     <h3 class="game-title">${game.name}</h3>
