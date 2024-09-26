@@ -29,6 +29,7 @@
             padding: 10px 20px;
             background-color: var(--background);
             border-bottom: 1px solid #333;
+            position: relative;
         }
         .logo-container {
             display: flex;
@@ -49,11 +50,35 @@
             color: var(--main-yellow);
             text-shadow: 0 0 10px var(--main-yellow);
         }
+        .search-container {
+            position: relative;
+        }
         .icon {
             font-size: 1.2em;
             color: var(--main-yellow);
             cursor: pointer;
             text-shadow: 0 0 10px var(--main-yellow);
+        }
+        .search-bar {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            width: 200px;
+            padding: 8px 12px;
+            margin-top: 10px;
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 20px;
+            color: #ffffff;
+            font-size: 0.9em;
+            box-shadow: 0 0 10px rgba(242, 215, 43, 0.3);
+            transition: all 0.3s ease;
+        }
+        .search-bar:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(242, 215, 43, 0.5);
+            width: 250px;
         }
         .welcome-message {
             font-size: 1.2em;
@@ -113,7 +138,10 @@
             <img src="/logo.png" alt="Wari Logo" class="logo">
             <h1>Wari</h1>
         </div>
-        <div class="icon" onclick="window.location.href='/search'">🔍</div>
+        <div class="search-container">
+            <div class="icon" onclick="toggleSearch()">🔍</div>
+            <input type="text" id="searchBar" class="search-bar" placeholder="Pesquisar jogos..." oninput="searchGames()">
+        </div>
     </header>
     <div class="container">
         <div class="welcome-message">Olá, o que você gostaria de jogar hoje?</div>
@@ -143,8 +171,9 @@
         ];
 
         const gameGrid = document.getElementById('gameGrid');
+        const searchBar = document.getElementById('searchBar');
 
-        games.forEach(game => {
+        function createGameCard(game) {
             const gameCard = document.createElement('div');
             gameCard.className = 'game-card';
             const gameUrl = game.url;
@@ -163,8 +192,36 @@
                 window.location.href = gameUrl;
             });
 
-            gameGrid.appendChild(gameCard);
-        });
+            return gameCard;
+        }
+
+        function displayGames(gamesToDisplay) {
+            gameGrid.innerHTML = '';
+            gamesToDisplay.forEach(game => {
+                gameGrid.appendChild(createGameCard(game));
+            });
+        }
+
+        function searchGames() {
+            const searchTerm = searchBar.value.toLowerCase();
+            const filteredGames = games.filter(game => 
+                game.name.toLowerCase().includes(searchTerm) ||
+                game.supports.some(support => support.toLowerCase().includes(searchTerm))
+            );
+            displayGames(filteredGames);
+        }
+
+        function toggleSearch() {
+            searchBar.style.display = searchBar.style.display === 'none' || searchBar.style.display === '' ? 'block' : 'none';
+            if (searchBar.style.display === 'none') {
+                searchBar.value = '';
+                displayGames(games);
+            } else {
+                searchBar.focus();
+            }
+        }
+
+        displayGames(games);
     </script>
 </body>
 </html>
