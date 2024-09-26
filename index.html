@@ -130,6 +130,11 @@
             font-size: 0.8em;
             color: var(--highlight-purple);
         }
+        .game-creator {
+            font-size: 0.8em;
+            color: var(--highlight-purple);
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -140,7 +145,7 @@
         </div>
         <div class="search-container">
             <div class="icon" onclick="toggleSearch()">🔍</div>
-            <input type="text" id="searchBar" class="search-bar" placeholder="Pesquisar jogos..." oninput="searchGames()">
+            <input type="text" id="searchBar" class="search-bar" placeholder="Pesquisar..." oninput="searchGames()">
         </div>
     </header>
     <div class="container">
@@ -150,24 +155,24 @@
 
     <script>
         const games = [
-            {name: "Magic Snake 2", url: "https://sites.pyxelworld.com/magicsnake2", supports: ["mouse", "toque"], image: "magicsnake2.jpg"},
-            {name: "Pyxel Chess", url: "https://sites.pyxelworld.com/pyxelchess", supports: ["teclado", "mouse"], image: "pyxelchess.jpg"},
-            {name: "Caça Fantasmas", url: "https://sites.pyxelworld.com/cacafantasmas", supports: ["teclado"], image: "cacafantasmas.jpg"},
-            {name: "Galaxy Invaders", url: "https://sites.pyxelworld.com/galaxyinvaders", supports: ["mouse", "toque"], image: "galaxyinvaders.jpg"},
-            {name: "Jogo da Velha", url: "https://sites.pyxelworld.com/jogodavelha", supports: ["teclado", "mouse", "toque"], image: "jogodavelha.jpg"},
-            {name: "Carro 3d", url: "https://sites.pyxelworld.com/carro3d", supports: ["teclado"], image: "carro3d.jpg"},
-            {name: "Aventura dos Predicados", url: "https://sites.pyxelworld.com/predicados", supports: ["teclado", "toque"], image: "predicados.jpg"},
-            {name: "Magic Snake", url: "https://sites.pyxelworld.com/magicsnake", supports: ["teclado", "toque"], image: "magicsnake.jpg"},
-            {name: "Geometry Rush", url: "https://sites.pyxelworld.com/geometryrush", supports: ["mouse"], image: "geometryrush.jpg"},
-            {name: "Magic Blocks", url: "https://sites.pyxelworld.com/magicblocks", supports: ["teclado", "mouse"], image: "magicblocks.jpg"},
-            {name: "Jogo da Idosa", url: "https://sites.pyxelworld.com/jogodaidosa", supports: ["teclado", "toque"], image: "jogodaidosa.jpg"},
-            {name: "Rei da África", url: "https://sites.pyxelworld.com/reidaafrica", supports: ["mouse", "toque"], image: "reidaafrica.jpg"},
-            {name: "Glue-it!", url: "https://sites.pyxelworld.com/glueit", supports: ["teclado", "mouse", "toque"], image: "glueit.jpg"},
-            {name: "Carros", url: "https://sites.pyxelworld.com/carros", supports: ["teclado"], image: "carros.jpg"},
-            {name: "Flappy Square", url: "https://sites.pyxelworld.com/flappysquare", supports: ["mouse", "toque"], image: "flappysquare.jpg"},
-            {name: "Jumping Cat", url: "https://sites.pyxelworld.com/jumpingcat", supports: ["teclado", "mouse", "toque"], image: "jumpingcat.jpg"},
-            {name: "Hit the Box", url: "https://hitthebox.pyxelworld.com/", supports: ["teclado"], image: "hitthebox.jpg"},
-            {name: "Corbos", url: "https://corbos.pyxelworld.com/", supports: ["mouse", "toque"], image: "corbos.jpg"}
+            {name: "Magic Snake 2", url: "https://sites.pyxelworld.com/magicsnake2", supports: ["teclado"], image: "magicsnake2.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Pyxel Chess", url: "https://sites.pyxelworld.com/pyxelchess", supports: ["teclado", "toque"], image: "pyxelchess.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Caça Fantasmas", url: "https://sites.pyxelworld.com/cacafantasmas", supports: ["teclado"], image: "cacafantasmas.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Galaxy Invaders", url: "https://sites.pyxelworld.com/galaxyinvaders", supports: ["mouse", "toque"], image: "galaxyinvaders.jpg", creator: "PHiro11, Magic"},
+            {name: "Jogo da Velha", url: "https://sites.pyxelworld.com/jogodavelha", supports: ["mouse", "toque"], image: "jogodavelha.jpg", creator: "PHiro11, Magic"},
+            {name: "Carro 3d", url: "https://sites.pyxelworld.com/carro3d", supports: ["teclado"], image: "carro3d.jpg", creator: "PHiro11, Magic"},
+            {name: "Aventura dos Predicados", url: "https://sites.pyxelworld.com/predicados", supports: ["mouse", "toque"], image: "predicados.jpg", creator: "trem, Magic"},
+            {name: "Magic Snake", url: "https://sites.pyxelworld.com/magicsnake", supports: ["teclado"], image: "magicsnake.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Geometry Rush", url: "https://sites.pyxelworld.com/geometryrush", supports: ["teclado"], image: "geometryrush.jpg", creator: "trem, Magic"},
+            {name: "Magic Blocks", url: "https://sites.pyxelworld.com/magicblocks", supports: ["teclado"], image: "magicblocks.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Jogo da Idosa", url: "https://sites.pyxelworld.com/jogodaidosa", supports: ["mouse", "toque"], image: "jogodaidosa.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Rei da África", url: "https://sites.pyxelworld.com/reidaafrica", supports: ["mouse", "toque"], image: "reidaafrica.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Glue-it!", url: "https://sites.pyxelworld.com/glueit", supports: ["mouse", "toque"], image: "glueit.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Carros", url: "https://sites.pyxelworld.com/carros", supports: ["teclado", "toque"], image: "carros.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Flappy Square", url: "https://sites.pyxelworld.com/flappysquare", supports: ["mouse", "mouse", "toque"], image: "flappysquare.jpg", creator: "trem, Magic"},
+            {name: "Jumping Cat", url: "https://sites.pyxelworld.com/jumpingcat", supports: ["teclado", "mouse", "toque"], image: "jumpingcat.jpg", creator: "Lukedinha2, Magic"},
+            {name: "Hit the Box", url: "https://hitthebox.pyxelworld.com/", supports: ["mouse", "toque"], image: "hitthebox.jpg", creator: "trem, Magic"},
+            {name: "Corbos", url: "https://corbos.pyxelworld.com/", supports: ["mouse", "toque"], image: "corbos.jpg", creator: "trem, Magic"}
         ];
 
         const gameGrid = document.getElementById('gameGrid');
@@ -184,6 +189,7 @@
                 </div>
                 <div class="game-info">
                     <h3 class="game-title">${game.name}</h3>
+                    <div class="game-creator">${game.creator}</div>
                     <div class="game-supports">Suporta: ${game.supports.join(', ')}</div>
                 </div>
             `;
@@ -206,7 +212,8 @@
             const searchTerm = searchBar.value.toLowerCase();
             const filteredGames = games.filter(game => 
                 game.name.toLowerCase().includes(searchTerm) ||
-                game.supports.some(support => support.toLowerCase().includes(searchTerm))
+                game.supports.some(support => support.toLowerCase().includes(searchTerm)) ||
+                game.creator.toLowerCase().includes(searchTerm)
             );
             displayGames(filteredGames);
         }
