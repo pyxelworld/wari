@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hub de Jogos Wari</title>
+    <style>
+        :root {
+            --main-yellow: #F2D72B;
+            --highlight-purple: #AE529F;
+            --background: #000000;
+            --card-bg: #232527;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 100%;
+            padding: 20px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: var(--background);
+            border-bottom: 1px solid #333;
+        }
+        .logo-container {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .logo {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            border-radius: 25%; /* Ajustado para criar cantos arredondados */
+            overflow: hidden;
+            object-fit: cover; /* Garante que a imagem cubra todo o espaço */
+        }
+        h1 {
+            font-size: 1.5em;
+            margin: 0;
+            color: var(--main-yellow);
+            text-shadow: 0 0 10px var(--main-yellow);
+        }
+        .icon {
+            font-size: 1.2em;
+            color: var(--main-yellow);
+            cursor: pointer;
+            text-shadow: 0 0 10px var(--main-yellow);
+        }
+        .welcome-message {
+            font-size: 1.2em;
+            margin: 20px 0;
+            color: var(--main-yellow);
+            text-shadow: 0 0 15px var(--main-yellow);
+        }
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .game-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(174, 82, 159, 0.3);
+            cursor: pointer;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(242, 215, 43, 0.6);
+        }
+        .game-image-container {
+            width: 100%;
+            padding-top: 56.25%; /* Proporção de Aspecto 16:9 */
+            position: relative;
+            overflow: hidden;
+        }
+        .game-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .game-info {
+            padding: 10px;
+        }
+        .game-title {
+            font-size: 0.9em;
+            margin: 0 0 5px 0;
+            color: var(--main-yellow);
+            text-shadow: 0 0 5px var(--main-yellow);
+        }
+        .game-supports {
+            font-size: 0.8em;
+            color: var(--highlight-purple);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-container" onclick="window.location.href='/'">
+            <img src="/logo.png" alt="Wari Logo" class="logo">
+            <h1>Wari</h1>
+        </div>
+        <div class="icon" onclick="window.location.href='/search'">🔍</div>
+    </header>
+    <div class="container">
+        <div class="welcome-message">Olá, o que você gostaria de jogar hoje?</div>
+        <div class="game-grid" id="gameGrid"></div>
+    </div>
+
+    <script>
+        const games = [
+            {name: "Galaxy Invaders", supports: ["teclado", "mouse"]},
+            {name: "Carro 3d", supports: ["teclado"]},
+            {name: "Jogo da Velha", supports: ["mouse", "toque"]},
+            {name: "Aventura dos Predicados", supports: ["teclado", "mouse", "toque"]},
+            {name: "Magic Snake", supports: ["teclado"]},
+            {name: "Geometry Rush", supports: ["mouse", "toque"]},
+            {name: "Magic Blocks", supports: ["teclado", "toque"]},
+            {name: "Jogo da Idosa", supports: ["mouse"]},
+            {name: "Glue-it!", supports: ["teclado", "mouse"]},
+            {name: "Carros", supports: ["teclado", "toque"]},
+            {name: "Flappy Square", supports: ["mouse", "toque"]},
+            {name: "Jumping Cat", supports: ["teclado", "mouse", "toque"]},
+            {name: "Hit the Box", supports: ["teclado"]},
+            {name: "Corbos", supports: ["mouse", "toque"]}
+        ];
+
+        const gameGrid = document.getElementById('gameGrid');
+
+        games.forEach(game => {
+            const gameCard = document.createElement('div');
+            gameCard.className = 'game-card';
+
+            const gameUrl = `https://sites.pyxelworld.com/${game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+            gameCard.innerHTML = `
+                <div class="game-image-container">
+                    <img src="${game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.jpg" alt="${game.name}" class="game-image">
+                </div>
+                <div class="game-info">
+                    <h3 class="game-title">${game.name}</h3>
+                    <div class="game-supports">Suporta: ${game.supports.join(', ')}</div>
+                </div>
+            `;
+
+            gameCard.addEventListener('click', () => {
+                window.location.href = gameUrl;
+            });
+
+            gameGrid.appendChild(gameCard);
+        });
+    </script>
+</body>
+</html>
