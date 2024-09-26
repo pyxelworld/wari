@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hub de Jogos Wari</title>
+    <title>Wari</title>
     <style>
         :root {
             --main-yellow: #F2D72B;
@@ -122,20 +122,23 @@
 
     <script>
         const games = [
-            {name: "Galaxy Invaders", supports: ["teclado", "mouse"]},
-            {name: "Carro 3d", supports: ["teclado"]},
-            {name: "Jogo da Velha", supports: ["mouse", "toque"]},
-            {name: "Aventura dos Predicados", supports: ["teclado", "mouse", "toque"]},
-            {name: "Magic Snake", supports: ["teclado"]},
-            {name: "Geometry Rush", supports: ["mouse", "toque"]},
-            {name: "Magic Blocks", supports: ["teclado", "toque"]},
-            {name: "Jogo da Idosa", supports: ["mouse"]},
-            {name: "Glue-it!", supports: ["teclado", "mouse"]},
-            {name: "Carros", supports: ["teclado", "toque"]},
-            {name: "Flappy Square", supports: ["mouse", "toque"]},
-            {name: "Jumping Cat", supports: ["teclado", "mouse", "toque"]},
-            {name: "Hit the Box", supports: ["teclado"]},
-            {name: "Corbos", supports: ["mouse", "toque"]}
+            {name: "Pyxel Chess", url: "https://sites.pyxelworld.com/PyxelChess", supports: ["teclado", "mouse"]},
+            {name: "Caça Fantasmas", url: "https://sites.pyxelworld.com/cacafantasmas", supports: ["teclado"]},
+            {name: "Galaxy Invaders", url: "https://sites.pyxelworld.com/galaxyinvaders", supports: ["mouse", "toque"]},
+            {name: "Jogo da Velha", url: "https://sites.pyxelworld.com/jogodavelha", supports: ["teclado", "mouse", "toque"]},
+            {name: "Carro 3d", url: "https://sites.pyxelworld.com/carro3d", supports: ["teclado"]},
+            {name: "Aventura dos Predicados", url: "https://sites.pyxelworld.com/predicados", supports: ["mouse", "toque"]},
+            {name: "Magic Snake", url: "https://sites.pyxelworld.com/magicsnake", supports: ["teclado", "toque"]},
+            {name: "Geomatry Rush", url: "https://sites.pyxelworld.com/geometryrush", supports: ["mouse"]},
+            {name: "Magic Blocks", url: "https://sites.pyxelworld.com/magicblocks", supports: ["teclado", "mouse"]},
+            {name: "Jogo da Idosa", url: "https://sites.pyxelworld.com/jogodaidosa", supports: ["teclado", "toque"]},
+            {name: "Rei da África", url: "https://sites.pyxelworld.com/reidaafrica", supports: ["mouse", "toque"]},
+            {name: "Glue-it!", url: "https://sites.pyxelworld.com/glueit", supports: ["teclado", "mouse", "toque"]},
+            {name: "Carros", url: "https://sites.pyxelworld.com/carros", supports: ["teclado"]},
+            {name: "Flappy Square", url: "https://sites.pyxelworld.com/flappysquare", supports: ["mouse", "toque"]},
+            {name: "Jumping Cat", url: "https://sites.pyxelworld.com/jumpingcat", supports: ["teclado", "mouse", "toque"]},
+            {name: "Hit the Box", url: "https://hitthebox.pyxelworld.com/", supports: ["teclado"]},
+            {name: "Corbos", url: "https://corbos.pyxelworld.com/", supports: ["mouse", "toque"]}
         ];
 
         const gameGrid = document.getElementById('gameGrid');
@@ -143,8 +146,7 @@
         games.forEach(game => {
             const gameCard = document.createElement('div');
             gameCard.className = 'game-card';
-
-            const gameUrl = `https://sites.pyxelworld.com/${game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+            const gameUrl = game.url;
 
             gameCard.innerHTML = `
                 <div class="game-image-container">
