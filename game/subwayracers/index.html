@@ -390,19 +390,6 @@
             }
         });
 
-        canvas.addEventListener('touchend', (e) => {
-            if (gameState === 'play') {
-                const touchEndX = e.changedTouches[0].clientX;
-                const swipeDistance = touchEndX - touchStartX;
-                
-                if (swipeDistance > 50 && player.lane < lanes.length - 1) {
-                    player.lane++;
-                } else if (swipeDistance < -50 && player.lane > 0) {
-                    player.lane--;
-                }
-            }
-        });
-
         document.addEventListener('keydown', (e) => {
             if (gameState === 'play') {
                 if (e.key === 'ArrowLeft' && player.lane > 0) {
