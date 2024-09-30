@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forquinha</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4a4e69;
+            --secondary-color: #9a8c98;
+            --accent-color: #c9ada7;
+            --background-color: #f2e9e4;
+            --text-color: #22223b;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        .game-container {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .title-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        .title-icon {
+            font-size: 2rem;
+            margin-right: 0.5rem;
+        }
+        #word-display {
+            font-size: 2rem;
+            margin: 1.5rem 0;
+            letter-spacing: 0.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        #chances {
+            font-weight: bold;
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        #hangman {
+            font-size: 3rem;
+            margin: 1rem 0;
+        }
+        #used-letters {
+            margin-top: 1rem;
+            font-size: 1rem;
+            color: var(--secondary-color);
+        }
+        button {
+            margin: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+        #message {
+            margin-top: 1rem;
+            font-weight: bold;
+            min-height: 1.5rem;
+        }
+        .letter-btn {
+            margin: 0.2rem;
+            padding: 0.5rem;
+            font-size: 1rem;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .letter-btn:hover {
+            background-color: var(--primary-color);
+        }
+        .letter-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #possible-words {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            text-align: left;
+        }
+        #possible-words h3 {
+            text-align: center;
+            color: var(--primary-color);
+        }
+        #word-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+        #word-list span {
+            flex-basis: calc(33% - 0.5rem);
+        }
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 1rem;
+            }
+            #word-display {
+                font-size: 1.5rem;
+            }
+            button {
+                font-size: 0.9rem;
+            }
+            #word-list span {
+                flex-basis: calc(50% - 0.5rem);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="title-container">
+            <span class="title-icon" role="img" aria-label="Ícone de garfo">🍴</span>
+            <h1>Forquinha</h1>
+        </div>
+        <p>Tente adivinhar a palavra secreta!</p>
+        <div id="hangman" aria-hidden="true">🙂</div>
+        <div id="word-display" aria-live="polite"></div>
+        <p id="chances" aria-live="polite">Chances restantes: 7</p>
+        <div id="letter-buttons"></div>
+        <p id="message" aria-live="assertive"></p>
+        <div id="used-letters" aria-live="polite">Letras utilizadas: </div>
+        <button onclick="resetGame()" id="resetButton" style="display: none;">Jogar Novamente</button>
+        <div id="possible-words">
+            <h3>Palavras Possíveis:</h3>
+            <div id="word-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const words = ["negrobelli", "piusempiu", "pedronegro", "ataquedotrem", "ataquedodragao", "piudobelli", "piusembelli", "delicianegra", "pedrocarvao", "carvaozinho", "tremzinho", "mariotesco", "pedrolingo"];
+        let secretWord, displayWord, chances, usedLetters;
+        const hangmanStages = ['🙂', '😐', '😕', '😟', '😨', '😰', '😭'];
+
+        function initGame() {
+            secretWord = words[Math.floor(Math.random() * words.length)];
+            displayWord = '_'.repeat(secretWord.length);
+            chances = 7;
+            usedLetters = new Set();
+            updateDisplay();
+            document.getElementById('message').textContent = '';
+            document.getElementById('resetButton').style.display = 'none';
+            createLetterButtons();
+            displayPossibleWords();
+        }
+
+        function createLetterButtons() {
+            const letterButtonsContainer = document.getElementById('letter-buttons');
+            letterButtonsContainer.innerHTML = '';
+            for (let i = 97; i <= 122; i++) {
+                const letter = String.fromCharCode(i);
+                const button = document.createElement('button');
+                button.textContent = letter;
+                button.className = 'letter-btn';
+                button.setAttribute('data-letter', letter);
+                button.onclick = () => checkLetter(letter);
+                letterButtonsContainer.appendChild(button);
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('word-display').textContent = displayWord;
+            document.getElementById('chances').textContent = `Chances restantes: ${chances}`;
+            document.getElementById('used-letters').textContent = `Letras utilizadas: ${Array.from(usedLetters).join(', ')}`;
+            document.getElementById('hangman').textContent = hangmanStages[7 - chances];
+        }
+
+        function checkLetter(letter) {
+            const message = document.getElementById('message');
+            
+            if (usedLetters.has(letter)) {
+                message.textContent = "Você já tentou esta letra. Tente outra.";
+                return;
+            }
+
+            usedLetters.add(letter);
+            document.querySelector(`[data-letter="${letter}"]`).disabled = true;
+            let found = false;
+
+            for (let i = 0; i < secretWord.length; i++) {
+                if (secretWord[i] === letter) {
+                    displayWord = displayWord.substr(0, i) + letter + displayWord.substr(i + 1);
+                    found = true;
+                }
+            }
+
+            if (found) {
+                message.textContent = "Boa! Letra encontrada.";
+                if (displayWord === secretWord) {
+                    message.textContent = `Parabéns! Você acertou a palavra "${secretWord}"!`;
+                    endGame();
+                }
+            } else {
+                chances--;
+                message.textContent = "Letra não encontrada. Tente novamente.";
+                if (chances === 0) {
+                    message.textContent = `Você perdeu! A palavra era "${secretWord}".`;
+                    endGame();
+                }
+            }
+
+            updateDisplay();
+        }
+
+        function endGame() {
+            document.querySelectorAll('.letter-btn').forEach(btn => btn.disabled = true);
+            document.getElementById('resetButton').style.display = 'inline-block';
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        function displayPossibleWords() {
+            const wordList = document.getElementById('word-list');
+            wordList.innerHTML = '';
+            words.forEach(word => {
+                const span = document.createElement('span');
+                span.textContent = word;
+                wordList.appendChild(span);
+            });
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
