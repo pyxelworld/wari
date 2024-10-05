@@ -269,15 +269,7 @@
                 } while (this.isCloseToPlayer(x, y));
 
                 const color = this.getRandomNeonColor();
-                const size = this.calculateAISnakeSize();
-                this.aiSnakes.push(new Snake(x, y, color, false, size));
-            }
-
-            calculateAISnakeSize() {
-                const playerSize = this.player.size;
-                const minSize = Math.max(1, playerSize - 100);
-                const maxSize = playerSize + 100;
-                return Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
+                this.aiSnakes.push(new Snake(x, y, color, false));
             }
 
             isCloseToPlayer(x, y) {
