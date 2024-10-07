@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adivinha a Nota Musical</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .game-container {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+        }
+        .score, .instrument {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .play-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .play-button, .replay-button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            flex: 1;
+        }
+        .play-button:hover, .replay-button:hover {
+            background-color: #45a049;
+        }
+        .replay-button {
+            background-color: #2196F3;
+        }
+        .replay-button:hover {
+            background-color: #1E88E5;
+        }
+        .note-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .note-button {
+            background-color: #008CBA;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .note-button:hover {
+            background-color: #007B9A;
+        }
+        .message {
+            font-size: 18px;
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 27px;
+        }
+        .playing-indicator {
+            width: 20px;
+            height: 20px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+            vertical-align: middle;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Adivinha a Nota Musical</h1>
+        <div class="score">Pontuação: <span id="score">0</span> | Recorde: <span id="highscore">0</span></div>
+        <div class="instrument">Instrumento: <span id="current-instrument"></span></div>
+        <div class="play-buttons">
+            <button class="play-button" onclick="game.generateAndPlayNote()">Nova Nota</button>
+            <button class="replay-button" onclick="game.replayCurrentNote()">Repetir Nota</button>
+        </div>
+        <div class="playing-indicator" id="playing-indicator"></div>
+        <div class="note-buttons">
+            <button class="note-button" onclick="game.checkNote('C')">Dó (C)</button>
+            <button class="note-button" onclick="game.checkNote('D')">Ré (D)</button>
+            <button class="note-button" onclick="game.checkNote('E')">Mi (E)</button>
+            <button class="note-button" onclick="game.checkNote('F')">Fá (F)</button>
+            <button class="note-button" onclick="game.checkNote('G')">Sol (G)</button>
+            <button class="note-button" onclick="game.checkNote('A')">Lá (A)</button>
+            <button class="note-button" onclick="game.checkNote('B')">Si (B)</button>
+        </div>
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        class AudioManager {
+            constructor() {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.noteFrequencies = {
+                    'C': 261.63, 'D': 293.66, 'E': 329.63, 'F': 349.23,
+                    'G': 392.00, 'A': 440.00, 'B': 493.88
+                };
+                this.instrumentTypes = {
+                    'piano': 'sine',
+                    'violao': 'triangle',
+                    'flauta': 'sine',
+                    'violino': 'sawtooth'
+                };
+                this.currentOscillator = null;
+                this.currentGainNode = null;
+            }
+
+            playNote(note, instrument, duration = 1) {
+                this.stopCurrentSound();
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                oscillator.type = this.instrumentTypes[instrument];
+                oscillator.frequency.setValueAtTime(this.noteFrequencies[note], this.audioContext.currentTime);
+
+                gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + duration);
+
+                this.currentOscillator = oscillator;
+                this.currentGainNode = gainNode;
+
+                this.showPlayingIndicator();
+
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        this.hidePlayingIndicator();
+                        resolve();
+                    }, duration * 1000);
+                });
+            }
+
+            stopCurrentSound() {
+                if (this.currentOscillator) {
+                    this.currentOscillator.stop();
+                    this.currentOscillator.disconnect();
+                }
+                if (this.currentGainNode) {
+                    this.currentGainNode.disconnect();
+                }
+            }
+
+            playEffect(type) {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                if (type === 'correct') {
+                    oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(1200, this.audioContext.currentTime + 0.1);
+                } else {
+                    oscillator.frequency.setValueAtTime(300, this.audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.1);
+                }
+
+                gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.1);
+            }
+
+            showPlayingIndicator() {
+                const indicator = document.getElementById('playing-indicator');
+                indicator.style.opacity = '1';
+            }
+
+            hidePlayingIndicator() {
+                const indicator = document.getElementById('playing-indicator');
+                indicator.style.opacity = '0';
+            }
+        }
+
+        class Game {
+            constructor() {
+                this.notes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+                this.instruments = ['piano', 'violao', 'flauta', 'violino'];
+                this.currentNote = '';
+                this.currentInstrument = '';
+                this.score = 0;
+                this.highscore = 0;
+                this.audioManager = new AudioManager();
+                this.isPlaying = false;
+            }
+
+            getRandomNote() {
+                return this.notes[Math.floor(Math.random() * this.notes.length)];
+            }
+
+            getRandomInstrument() {
+                return this.instruments[Math.floor(Math.random() * this.instruments.length)];
+            }
+
+            async generateAndPlayNote() {
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+
+                this.currentNote = this.getRandomNote();
+                this.currentInstrument = this.getRandomInstrument();
+                document.getElementById('current-instrument').textContent = this.currentInstrument;
+                
+                await this.audioManager.playNote(this.currentNote, this.currentInstrument);
+                this.isPlaying = false;
+            }
+
+            async replayCurrentNote() {
+                if (this.isPlaying || !this.currentNote) return;
+                this.isPlaying = true;
+
+                await this.audioManager.playNote(this.currentNote, this.currentInstrument);
+                this.isPlaying = false;
+            }
+
+            async checkNote(note) {
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+
+                if (note === this.currentNote) {
+                    this.score++;
+                    document.getElementById('score').textContent = this.score;
+                    this.showMessage('Correto!', 'green');
+                    await this.audioManager.playEffect('correct');
+                    
+                    if (this.score > this.highscore) {
+                        this.highscore = this.score;
+                        document.getElementById('highscore').textContent = this.highscore;
+                    }
+                } else {
+                    this.showMessage('Incorreto. Tente novamente!', 'red');
+                    await this.audioManager.playEffect('incorrect');
+                }
+                
+                setTimeout(() => {
+                    this.clearMessage();
+                }, 1500);
+
+                await this.generateAndPlayNote();
+                this.isPlaying = false;
+            }
+
+            showMessage(text, color) {
+                const messageElement = document.getElementById('message');
+                messageElement.textContent = text;
+                messageElement.style.color = color;
+            }
+
+            clearMessage() {
+                document.getElementById('message').textContent = '';
+            }
+        }
+
+        const game = new Game();
+        game.generateAndPlayNote();
+    </script>
+</body>
+</html>
