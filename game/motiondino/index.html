@@ -44,15 +44,33 @@
             text-align: center;
             margin-top: 10px;
         }
+        #cameraSelect {
+            position: absolute;
+            top: 170px;
+            left: 10px;
+            width: 160px;
+        }
+        #statusMessage {
+            position: absolute;
+            top: 200px;
+            left: 10px;
+            width: 160px;
+            font-size: 12px;
+            color: #535353;
+        }
     </style>
 </head>
 <body>
     <div>
         <canvas id="gameCanvas" width="800" height="200"></canvas>
-        <video id="videoPreview" autoplay muted></video>
+        <video id="videoPreview" autoplay muted playsinline></video>
         <div id="jumpIndicator">
             <div id="jumpBar"></div>
         </div>
+        <select id="cameraSelect">
+            <option value="">Select camera</option>
+        </select>
+        <div id="statusMessage"></div>
         <div id="instructions">Jump in real life to make the dino jump!</div>
     </div>
     <script>
@@ -61,6 +79,8 @@
         const videoPreview = document.getElementById('videoPreview');
         const jumpBar = document.getElementById('jumpBar');
         const instructions = document.getElementById('instructions');
+        const cameraSelect = document.getElementById('cameraSelect');
+        const statusMessage = document.getElementById('statusMessage');
 
         const GAME_SPEED = 5;
         const GRAVITY = 0.6;
@@ -105,7 +125,7 @@
                     this.vy = this.jumpForce;
                     this.grounded = false;
                     this.jumpTimer = 0;
-                    this.jumpCooldown = 45; // Set cooldown to 30 frames (0.5 seconds at 60 FPS)
+                    this.jumpCooldown = 45;
                 }
             }
 
@@ -293,7 +313,7 @@
                 score++;
             } else {
                 restartTimer++;
-                if (restartTimer >= 60) { // 1 second delay (60 frames at 60 FPS)
+                if (restartTimer >= 60) {
                     canRestart = true;
                 }
             }
@@ -334,24 +354,35 @@
         let video;
         let lastImageData;
         let jumpDetected = false;
+        let currentStream;
 
-        function setupCamera() {
-            navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
-                .then(function(stream) {
-                    video = document.createElement('video');
-                    video.srcObject = stream;
-                    video.play();
+        async function setupCamera(deviceId = null) {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
 
-                    videoPreview.srcObject = stream;
+            const constraints = {
+                video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }
+            };
 
-                    video.onloadedmetadata = function(e) {
-                        processFrame();
-                    };
-                })
-                .catch(function(err) {
-                    console.error('Error accessing camera:', err);
-                    alert('Unable to access the camera. Please make sure you have a camera connected and you\'ve granted permission to use it.');
-                });
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentStream = stream;
+                video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+
+                videoPreview.srcObject = stream;
+
+                video.onloadedmetadata = function(e) {
+                    processFrame();
+                };
+                statusMessage.textContent = 'Camera switched successfully';
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                statusMessage.textContent = 'Error accessing camera. Please try again.';
+                alert('Unable to access the camera. Please make sure you have a camera connected and you\'ve granted permission to use it.');
+            }
         }
 
         function processFrame() {
@@ -367,7 +398,7 @@
 
             if (lastImageData) {
                 const diff = detectMotion(imageData, lastImageData);
-                if (diff > 8) { // Adjust this threshold as needed
+                if (diff > 7) {
                     jumpDetected = true;
                     jumpBar.style.width = '100%';
                     if (!gameOver) {
@@ -409,9 +440,84 @@
             instructions.textContent = 'Jump in real life to make the dino jump!';
         }
 
+        // Populate camera select
+        async function populateCameraSelect() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                
+                cameraSelect.innerHTML = '<option value="">Select camera</option>';
+                
+                videoDevices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    
+                    // Improved labeling for different devices
+                    if (device.label) {
+                        option.text = device.label;
+                    } else if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                        // iOS-specific naming
+                        if (index === 0) option.text = 'Front Camera';
+                        else if (index === 1) option.text = 'Back Camera';
+                        else option.text = `Camera ${index + 1}`;
+                    } else {
+                        option.text = `Camera ${index + 1}`;
+                    }
+                    
+                    cameraSelect.appendChild(option);
+                });
+
+                cameraSelect.onchange = function() {
+                    if (this.value) {
+                        setupCamera(this.value);
+                    }
+                };
+
+                if (videoDevices.length > 0) {
+                    setupCamera(videoDevices[0].deviceId);
+                } else {
+                    statusMessage.textContent = 'No cameras found. Please connect a camera and refresh the page.';
+                }
+            } catch (err) {
+                console.error('Error enumerating devices:', err);
+                statusMessage.textContent = 'Error detecting cameras. Please check permissions and try again.';
+            }
+        }
+
+        // Handle orientation changes
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                // Re-setup camera with current device
+                if (cameraSelect.value) {
+                    setupCamera(cameraSelect.value);
+                }
+            }, 200);
+        });
+
         // Start the game
-        setupCamera();
+        populateCameraSelect();
         gameLoop();
+
+        // Check and request permissions if needed
+        async function checkAndRequestPermissions() {
+            try {
+                const result = await navigator.permissions.query({ name: 'camera' });
+                if (result.state === 'granted') {
+                    populateCameraSelect();
+                } else if (result.state === 'prompt') {
+                    statusMessage.textContent = 'Please grant camera permission when prompted.';
+                    await navigator.mediaDevices.getUserMedia({ video: true });
+                    populateCameraSelect();
+                } else {
+                    statusMessage.textContent = 'Camera permission denied. Please enable it in your browser settings.';
+                }
+            } catch (err) {
+                console.error('Error checking permissions:', err);
+                statusMessage.textContent = 'Unable to check camera permissions. Please ensure your browser supports this feature.';
+            }
+        }
+
+        checkAndRequestPermissions();
     </script>
 </body>
 </html>
