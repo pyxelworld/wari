@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quaderos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a2a3a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #4a90e2, #5ab9ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #game-container {
+            background-color: #2c3e50;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        #board {
+            display: grid;
+            gap: 5px;
+            background-color: #34495e;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
+        .tile {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .tile:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.2);
+        }
+        .tile.empty {
+            background: none;
+            box-shadow: none;
+        }
+        #controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        button {
+            margin: 10px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border: none;
+            color: white;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            background: linear-gradient(45deg, #2980b9, #3498db);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.2);
+        }
+        #moves {
+            margin-top: 20px;
+            font-size: 18px;
+            background-color: #2c3e50;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #instructions {
+            margin-top: 20px;
+            text-align: center;
+            font-style: italic;
+            color: #bdc3c7;
+        }
+        @media (max-width: 600px) {
+            .tile {
+                width: 60px;
+                height: 60px;
+                font-size: 20px;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Quaderos</h1>
+    <div id="controls">
+        <button onclick="startGame(3)">Fácil (3x3)</button>
+        <button onclick="startGame(4)">Médio (4x4)</button>
+        <button onclick="startGame(5)">Difícil (5x5)</button>
+    </div>
+    <div id="game-container">
+        <div id="board"></div>
+    </div>
+    <div id="moves">Movimentos: 0</div>
+    <div id="instructions">Clique nos quadrados adjacentes ao espaço vazio para movê-los.</div>
+    <script>
+        let size, tiles, emptyTile, moveCount;
+
+        function startGame(n) {
+            size = n;
+            tiles = Array.from({length: size * size - 1}, (_, i) => i + 1);
+            tiles.push(0);
+            emptyTile = size * size - 1;
+            moveCount = 0;
+            shuffleTiles();
+            createBoard();
+            updateMoveCount();
+        }
+
+        function shuffleTiles() {
+            for (let i = tiles.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+                if (tiles[i] === 0) emptyTile = i;
+            }
+            if (!isSolvable()) shuffleTiles();
+        }
+
+        function isSolvable() {
+            let invCount = 0;
+            for (let i = 0; i < tiles.length - 1; i++) {
+                for (let j = i + 1; j < tiles.length; j++) {
+                    if (tiles[i] && tiles[j] && tiles[i] > tiles[j]) invCount++;
+                }
+            }
+            if (size % 2 === 1) return invCount % 2 === 0;
+            else return (invCount + Math.floor(emptyTile / size)) % 2 === 1;
+        }
+
+        function createBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            
+            for (let i = 0; i < tiles.length; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                if (tiles[i] === 0) {
+                    tile.classList.add('empty');
+                } else {
+                    tile.textContent = tiles[i];
+                }
+                tile.addEventListener('click', () => moveTile(i));
+                board.appendChild(tile);
+            }
+        }
+
+        function moveTile(index) {
+            if (isAdjacent(index, emptyTile)) {
+                tiles[emptyTile] = tiles[index];
+                tiles[index] = 0;
+                emptyTile = index;
+                moveCount++;
+                createBoard();
+                updateMoveCount();
+                if (checkWin()) {
+                    setTimeout(() => {
+                        alert(`Parabéns! Você venceu em ${moveCount} movimentos!`);
+                    }, 100);
+                }
+            }
+        }
+
+        function isAdjacent(index1, index2) {
+            const row1 = Math.floor(index1 / size);
+            const col1 = index1 % size;
+            const row2 = Math.floor(index2 / size);
+            const col2 = index2 % size;
+            return (Math.abs(row1 - row2) + Math.abs(col1 - col2) === 1);
+        }
+
+        function checkWin() {
+            for (let i = 0; i < tiles.length - 1; i++) {
+                if (tiles[i] !== i + 1) return false;
+            }
+            return true;
+        }
+
+        function updateMoveCount() {
+            document.getElementById('moves').textContent = `Movimentos: ${moveCount}`;
+        }
+
+        startGame(3);
+    </script>
+</body>
+</html>
