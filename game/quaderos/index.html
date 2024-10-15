@@ -60,6 +60,10 @@
             transition: all 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             position: absolute;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
         .tile:hover {
             transform: scale(1.05);
@@ -142,9 +146,10 @@
         <span id="moves">Movimentos: 0</span>
         <span id="time" style="margin-left: 20px;">Tempo: 00:00</span>
     </div>
-    <div id="instructions">Clique nos quadrados adjacentes ao espaço vazio para movê-los.</div>
+    <div id="instructions">Clique ou deslize os quadrados adjacentes ao espaço vazio para movê-los.</div>
     <script>
         let size, tiles, emptyTile, moveCount, timeElapsed, timerInterval, tileSize;
+        let startX, startY, startTime;
 
         function startGame() {
             size = parseInt(document.getElementById('size-select').value);
@@ -209,7 +214,66 @@
                     tile.textContent = tiles[i];
                 }
                 tile.addEventListener('click', () => moveTile(i));
+                tile.addEventListener('mousedown', handleStart);
+                tile.addEventListener('touchstart', handleStart);
                 board.appendChild(tile);
+            }
+
+            board.addEventListener('mousemove', handleMove);
+            board.addEventListener('mouseup', handleEnd);
+            board.addEventListener('touchmove', handleMove);
+            board.addEventListener('touchend', handleEnd);
+        }
+
+        function handleStart(e) {
+            const touch = e.type === 'touchstart' ? e.touches[0] : e;
+            startX = touch.clientX;
+            startY = touch.clientY;
+            startTime = new Date().getTime();
+        }
+
+        function handleMove(e) {
+            if (!startX || !startY) return;
+            e.preventDefault();
+        }
+
+        function handleEnd(e) {
+            if (!startX || !startY) return;
+
+            const touch = e.type === 'touchend' ? e.changedTouches[0] : e;
+            const endX = touch.clientX;
+            const endY = touch.clientY;
+            const endTime = new Date().getTime();
+
+            const distX = endX - startX;
+            const distY = endY - startY;
+            const duration = endTime - startTime;
+
+            if (duration < 300 && Math.abs(distX) + Math.abs(distY) > tileSize / 4) {
+                const direction = Math.abs(distX) > Math.abs(distY)
+                    ? (distX > 0 ? 'right' : 'left')
+                    : (distY > 0 ? 'down' : 'up');
+
+                const tileIndex = getTileIndexFromDirection(direction);
+                if (tileIndex !== -1) {
+                    moveTile(tileIndex);
+                }
+            }
+
+            startX = null;
+            startY = null;
+        }
+
+        function getTileIndexFromDirection(direction) {
+            const emptyRow = Math.floor(emptyTile / size);
+            const emptyCol = emptyTile % size;
+
+            switch (direction) {
+                case 'up': return emptyRow < size - 1 ? emptyTile + size : -1;
+                case 'down': return emptyRow > 0 ? emptyTile - size : -1;
+                case 'left': return emptyCol < size - 1 ? emptyTile + 1 : -1;
+                case 'right': return emptyCol > 0 ? emptyTile - 1 : -1;
+                default: return -1;
             }
         }
 
