@@ -309,7 +309,7 @@
                     const points = this.isAccidentalMode ? 2 : 1;
                     this.score += points;
                     document.getElementById('score').textContent = this.score;
-                    this.showMessage(Correto! +${points} ponto${points > 1 ? 's' : ''}. Ouça a próxima nota., 'green');
+                    this.showMessage(`Correto! +${points} ponto${points > 1 ? 's' : ''}. Ouça a próxima nota.`, 'green');
                     await this.audioManager.playEffect('correct');
                     
                     if (this.score > this.highscore) {
@@ -319,7 +319,7 @@
                 } else if (this.isAccidentalMode && this.isHalfToneApart(note, this.currentNote)) {
                     this.score += 1;
                     document.getElementById('score').textContent = this.score;
-                    this.showMessage(Quase! Você errou por meio tom. +1 ponto. A nota correta era ${this.currentNote}. Ouça a próxima nota., 'orange');
+                    this.showMessage(`Quase! Você errou por meio tom. +1 ponto. A nota correta era ${this.currentNote}. Ouça a próxima nota.`, 'orange');
                     await this.audioManager.playEffect('half-tone');
                     
                     if (this.score > this.highscore) {
@@ -327,7 +327,7 @@
                         document.getElementById('highscore').textContent = this.highscore;
                     }
                 } else {
-                    this.showMessage(Incorreto. A nota correta era ${this.currentNote}. Ouça a próxima nota., 'red');
+                    this.showMessage(`Incorreto. A nota correta era ${this.currentNote}. Ouça a próxima nota.`, 'red');
                     await this.audioManager.playEffect('incorrect');
                 }
                 
