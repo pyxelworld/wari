@@ -219,8 +219,8 @@ let stars = [];
 const GRAVITY = 0.4;
 const JUMP = -8;
 const PIPE_SPEED = 3;
-const PIPE_SPAWN_RATE = 400; // Increased distance between pipes
-const PIPE_GAP = 250; // Increased gap between pipes
+const PIPE_SPAWN_RATE = 450; // Increased distance between pipes
+const PIPE_GAP = 225; // Increased gap between pipes
 const PIPE_MIN_HEIGHT = 80;
 
 // Initialize stars for night time
@@ -418,7 +418,7 @@ function drawPipes() {
 
 function drawBackground() {
     // Sky color changes based on time
-    timeOfDay += 0.0005;
+    timeOfDay += 0.00025;
     if(timeOfDay >= 1) timeOfDay = 0;
     
     dayTime = timeOfDay < 0.5;
