@@ -190,6 +190,21 @@
             to { opacity: 1; transform: scale(1); }
         }
 
+        #settings {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #16213e;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        #settings label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
         @media (max-width: 600px) {
             .piece-cell {
                 width: 18px;
@@ -220,6 +235,12 @@
         <p>High Score: <span id="final-highscore">0</span></p>
         <button onclick="new Game()">Play Again</button>
     </div>
+    <div id="settings">
+        <label>
+            <input type="checkbox" id="stacking-toggle" checked>
+            Allow Stacking
+        </label>
+    </div>
 
     <script>
         class Game {
@@ -232,13 +253,15 @@
                 this.dragElement = null;
                 this.pieceColors = new Map();
                 this.currentPieceColor = null;
-                this.isFirstMove = true; // Adiciona controle para a primeira jogada
+                this.isFirstMove = true;
+                this.allowStacking = true;
 
                 document.getElementById('game-over').classList.remove('show');
                 document.getElementById('highscore').textContent = `High Score: ${this.highScore}`;
                 this.initBoard();
                 this.initPieces();
                 this.initEvents();
+                this.initSettings();
             }
 
             getHighScore() {
@@ -364,6 +387,13 @@
                 document.addEventListener('touchend', this.endDrag.bind(this));
             }
 
+            initSettings() {
+                const stackingToggle = document.getElementById('stacking-toggle');
+                stackingToggle.addEventListener('change', (e) => {
+                    this.allowStacking = e.target.checked;
+                });
+            }
+
             startDrag(e) {
                 e.preventDefault();
                 const touch = e.type === 'touchstart' ? e.touches[0] : e;
@@ -431,6 +461,9 @@
                             if (boardRow >= this.boardSize || boardCol >= this.boardSize) {
                                 return false;
                             }
+                            if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
+                                return false;
+                            }
                         }
                     }
                 }
@@ -478,69 +511,85 @@
 
                 this.dragging.remove();
                 this.addNewPiece();
+                this.score += 10; // Pontos por colocar blocos
+                document.getElementById('score').textContent = `Score: ${this.score}`;
                 this.checkLines();
                 this.checkGameOver();
-                this.checkWinCondition(); // Verifica se o jogador venceu
+                this.checkWinCondition();
                 return true;
             }
 
             checkLines() {
                 let linesCleared = 0;
-                
+
+                // Verificar linhas completas
                 for (let row = 0; row < this.boardSize; row++) {
                     if (this.board[row].every(cell => cell === 1)) {
-                        this.clearLine(row, true);
+                        this.clearLine(row, 'row');
                         linesCleared++;
                     }
                 }
 
+                // Verificar colunas completas
                 for (let col = 0; col < this.boardSize; col++) {
                     if (this.board.every(row => row[col] === 1)) {
-                        this.clearLine(col, false);
+                        this.clearLine(col, 'col');
                         linesCleared++;
                     }
                 }
 
                 if (linesCleared > 0) {
-                    this.score += linesCleared * 100;
+                    this.score += linesCleared * 100; // Pontos por linhas limpas
                     document.getElementById('score').textContent = `Score: ${this.score}`;
                 }
             }
 
-            clearLine(index, isRow) {
-                for (let i = 0; i < this.boardSize; i++) {
-                    const cell = document.querySelector(
-                        `.cell[data-${isRow ? 'row' : 'col'}="${index}"][data-${isRow ? 'col' : 'row'}="${i}"]`
-                    );
-                    cell.classList.add('clear-animation');
-                    setTimeout(() => {
-                        cell.style.backgroundColor = '';
-                        cell.classList.remove('filled', 'clear-animation');
-                    }, 400);
-
-                    if (isRow) {
-                        this.board[index][i] = 0;
-                    } else {
-                        this.board[i][index] = 0;
+            clearLine(index, type) {
+                if (type === 'row') {
+                    for (let col = 0; col < this.boardSize; col++) {
+                        this.board[index][col] = 0;
+                        const cell = document.querySelector(`.cell[data-row="${index}"][data-col="${col}"]`);
+                        cell.classList.add('clear-animation');
+                        setTimeout(() => {
+                            cell.style.backgroundColor = '#0f3460';
+                            cell.classList.remove('filled', 'clear-animation');
+                        }, 600);
+                    }
+                } else if (type === 'col') {
+                    for (let row = 0; row < this.boardSize; row++) {
+                        this.board[row][index] = 0;
+                        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${index}"]`);
+                        cell.classList.add('clear-animation');
+                        setTimeout(() => {
+                            cell.style.backgroundColor = '#0f3460';
+                            cell.classList.remove('filled', 'clear-animation');
+                        }, 600);
                     }
                 }
             }
 
             checkWinCondition() {
-                // Verifica se o tabuleiro está completamente vazio (exceto na primeira jogada)
-                if (!this.isFirstMove && this.board.every(row => row.every(cell => cell === 0))) {
+                // Exemplo de condição de vitória: atingir uma pontuação específica
+                const winScore = 1000;
+                if (this.score >= winScore) {
+                    alert('Parabéns! Você atingiu a pontuação de vitória!');
                     this.setHighScore(this.score);
-                    alert('Parabéns! Você venceu o jogo!');
-                    document.getElementById('final-score').textContent = this.score;
-                    document.getElementById('final-highscore').textContent = this.highScore;
-                    document.getElementById('game-over').classList.add('show');
+                    this.resetGame();
                 }
-                this.isFirstMove = false; // Após a primeira jogada, desativa o controle de primeira jogada
+            }
+
+            resetGame() {
+                this.board = Array(this.boardSize).fill().map(() => Array(this.boardSize).fill(0));
+                this.score = 0;
+                document.getElementById('score').textContent = `Score: ${this.score}`;
+                this.initBoard();
+                this.initPieces();
             }
         }
 
-        // Inicia o jogo
-        new Game();
+        window.onload = () => {
+            new Game();
+        };
     </script>
 </body>
 </html>
