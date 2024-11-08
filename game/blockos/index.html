@@ -100,15 +100,17 @@
         }
 
         .piece {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
             gap: 3px;
-            background: #16213e;
-            padding: 8px;
-            border-radius: 12px;
             cursor: pointer;
             transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            padding: 5px;
+            border-radius: 8px;
+            background: transparent;
         }
 
         .piece:hover {
@@ -326,8 +328,11 @@
                 piece.dataset.shape = JSON.stringify(pieceData.shape);
                 this.pieceColors.set(piece, pieceData.color);
                 
-                for (let row = 0; row < pieceData.shape.length; row++) {
-                    for (let col = 0; col < pieceData.shape[row].length; col++) {
+                const maxRow = pieceData.shape.length;
+                const maxCol = Math.max(...pieceData.shape.map(row => row.length));
+
+                for (let row = 0; row < maxRow; row++) {
+                    for (let col = 0; col < maxCol; col++) {
                         const cell = document.createElement('div');
                         cell.className = 'piece-cell';
                         if (pieceData.shape[row][col]) {
@@ -470,7 +475,7 @@
                             if (boardRow >= this.boardSize || boardCol >= this.boardSize) {
                                 return false;
                             }
-                            if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
+if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
                                 return false;
                             }
                         }
