@@ -11,8 +11,6 @@
             --piece-color-3: #4d4dff;
             --piece-color-4: #ff4dff;
             --piece-color-5: #ffff4d;
-            --piece-color-6: #4dffff;
-            --piece-color-7: #ff944d;
         }
 
         body {
@@ -101,14 +99,14 @@
 
         .piece {
             display: grid;
-            grid-template-columns: repeat(4, 22px);
+            grid-template-columns: repeat(3, 1fr);
             gap: 3px;
+            background: #16213e;
+            padding: 8px;
+            border-radius: 12px;
             cursor: pointer;
             transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            padding: 5px;
-            border-radius: 8px;
-            background: transparent;
         }
 
         .piece:hover {
@@ -122,12 +120,11 @@
         .piece-cell {
             width: 22px;
             height: 22px;
-            background: transparent;
+            background: #0f3460;
             border-radius: 4px;
         }
 
         .piece-cell.active {
-            background: #0f3460;
             transition: background-color 0.4s;
         }
 
@@ -257,7 +254,7 @@
                 this.pieceColors = new Map();
                 this.currentPieceColor = null;
                 this.isFirstMove = true;
-                this.allowStacking = false; // Stacking desligado por padrão
+                this.allowStacking = false;
 
                 document.getElementById('game-over').classList.remove('show');
                 document.getElementById('highscore').textContent = `High Score: ${this.highScore}`;
@@ -307,14 +304,15 @@
                     [[1,0,0], [1,1,1], [0,0,0]],
                     [[1,1,1], [0,1,0], [0,0,0]],
                     [[1,0,0], [1,0,0], [1,0,0]],
-                    [[1,1,1,1], [0,0,0,0], [0,0,0,0], [0,0,0,0]],
-                    [[1,1,1,0], [0,0,1,0], [0,0,0,0], [0,0,0,0]],
-                    [[1,1,0,0], [0,1,1,0], [0,0,0,0], [0,0,0,0]],
+                    // Inverted and reversed shapes
+                    [[0,0,0], [1,1,1], [0,0,0]],
                     [[0,1,0], [1,1,1], [0,0,0]],
-                    [[0,1,1], [1,1,0], [0,0,0]],
-                    [[1,0,0], [1,1,0], [0,1,0]]
+                    [[0,0,1], [0,1,1], [0,0,0]],
+                    [[1,1,1], [1,0,0], [0,0,0]],
+                    [[0,1,0], [1,1,1], [0,0,0]],
+                    [[0,0,1], [0,0,1], [0,0,1]]
                 ];
-                const colors = ['--piece-color-1', '--piece-color-2', '--piece-color-3', '--piece-color-4', '--piece-color-5', '--piece-color-6', '--piece-color-7'];
+                const colors = ['--piece-color-1', '--piece-color-2', '--piece-color-3', '--piece-color-4', '--piece-color-5'];
                 const shape = shapes[Math.floor(Math.random() * shapes.length)];
                 const color = colors[Math.floor(Math.random() * colors.length)];
                 return { shape, color };
@@ -327,14 +325,11 @@
                 piece.dataset.shape = JSON.stringify(pieceData.shape);
                 this.pieceColors.set(piece, pieceData.color);
                 
-                const maxRow = pieceData.shape.length;
-                const maxCol = Math.max(...pieceData.shape.map(row => row.length));
-
-                for (let row = 0; row < maxRow; row++) {
-                    for (let col = 0; col < maxCol; col++) {
+                for (let row = 0; row < 3; row++) {
+                    for (let col = 0; col < 3; col++) {
                         const cell = document.createElement('div');
                         cell.className = 'piece-cell';
-                        if (pieceData.shape[row][col]) {
+                        if (pieceData.shape[row] && pieceData.shape[row][col]) {
                             cell.classList.add('active');
                             cell.style.backgroundColor = `var(${pieceData.color})`;
                         }
@@ -343,7 +338,7 @@
                 }
                 
                 piece.addEventListener('mousedown', this.startDrag.bind(this));
-                piece.addEventListener('touchstart', this.startDrag.bind(this), { passive: true });
+                piece.addEventListener('touchstart', this.startDrag.bind(this));
                 
                 return piece;
             }
@@ -394,14 +389,13 @@
 
             initEvents() {
                 document.addEventListener('mousemove', this.drag.bind(this));
-                document.addEventListener('touchmove', this.drag.bind(this), { passive: true });
+                document.addEventListener('touchmove', this.drag.bind(this), { passive: false });
                 document.addEventListener('mouseup', this.endDrag.bind(this));
-                document.addEventListener('touchend', this.endDrag.bind(this), { passive: true });
+                document.addEventListener('touchend', this.endDrag.bind(this));
             }
 
             initSettings() {
                 const stackingToggle = document.getElementById('stacking-toggle');
-                stackingToggle.checked = this.allowStacking;
                 stackingToggle.addEventListener('change', (e) => {
                     this.allowStacking = e.target.checked;
                 });
@@ -474,7 +468,7 @@
                             if (boardRow >= this.boardSize || boardCol >= this.boardSize) {
                                 return false;
                             }
-if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
+                            if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
                                 return false;
                             }
                         }
@@ -485,30 +479,29 @@ if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
 
             endDrag(e) {
                 if (!this.dragElement) return;
-                const touch = e.type === 'touchend' ? e.changedTouches[0] : e;
                 const board = document.getElementById('board');
                 const rect = board.getBoundingClientRect();
+                const touch = e.type === 'touchend' ? e.changedTouches[0] : e;
+                
+                this.clearHighlight();
                 
                 if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
                     touch.pageY >= rect.top && touch.pageY <= rect.bottom) {
                     const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
                     const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
-                    const shape = JSON.parse(this.dragging.dataset.shape);
-                    
-                    if (this.canPlacePiece(row, col, shape)) {
-                        this.placePiece(row, col, shape);
-                        this.dragging.remove();
-                        this.addNewPiece();
-                    }
+                    this.placePiece(row, col, JSON.parse(this.dragging.dataset.shape));
                 }
-                
-                this.dragElement.remove();
+
+                document.body.removeChild(this.dragElement);
                 this.dragElement = null;
                 this.dragging = null;
-                this.clearHighlight();
+this.currentPieceColor = null;
+                this.addNewPiece();
             }
 
             placePiece(startRow, startCol, shape) {
+                if (!this.canPlacePiece(startRow, startCol, shape)) return;
+
                 for (let row = 0; row < shape.length; row++) {
                     for (let col = 0; col < shape[row].length; col++) {
                         if (shape[row][col]) {
@@ -519,13 +512,16 @@ if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
                                 `.cell[data-row="${boardRow}"][data-col="${boardCol}"]`
                             );
                             if (cell) {
-                                cell.style.backgroundColor = `var(${this.currentPieceColor})`;
                                 cell.classList.add('filled');
+                                cell.style.backgroundColor = `var(${this.currentPieceColor})`;
                             }
                         }
                     }
                 }
+
                 this.checkLines();
+                this.score += shape.flat().reduce((acc, val) => acc + val, 0) * 10;
+                document.getElementById('score').textContent = `Score: ${this.score}`;
             }
 
             checkLines() {
@@ -575,6 +571,14 @@ if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
                         }, 600);
                     }
                 }
+            }
+
+            resetGame() {
+                this.board = Array(this.boardSize).fill().map(() => Array(this.boardSize).fill(0));
+                this.score = 0;
+                document.getElementById('score').textContent = `Score: ${this.score}`;
+                this.initBoard();
+                this.initPieces();
             }
         }
 
