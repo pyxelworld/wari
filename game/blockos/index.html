@@ -237,7 +237,7 @@
     </div>
     <div id="settings">
         <label>
-            <input type="checkbox" id="stacking-toggle" checked>
+            <input type="checkbox" id="stacking-toggle">
             Allow Stacking
         </label>
     </div>
@@ -389,6 +389,7 @@
 
             initSettings() {
                 const stackingToggle = document.getElementById('stacking-toggle');
+                stackingToggle.checked = this.allowStacking;
                 stackingToggle.addEventListener('change', (e) => {
                     this.allowStacking = e.target.checked;
                 });
