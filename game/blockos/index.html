@@ -100,10 +100,8 @@
         }
 
         .piece {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
+            display: grid;
+            grid-template-columns: repeat(4, 22px);
             gap: 3px;
             cursor: pointer;
             transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -124,11 +122,12 @@
         .piece-cell {
             width: 22px;
             height: 22px;
-            background: #0f3460;
+            background: transparent;
             border-radius: 4px;
         }
 
         .piece-cell.active {
+            background: #0f3460;
             transition: background-color 0.4s;
         }
 
