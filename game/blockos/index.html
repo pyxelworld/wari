@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- Todo o código do head permanece igual -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blockos</title>
     <style>
-        /* Todo o CSS permanece exatamente igual */
         :root {
-            --piece-color-1: #ff0000;
-            --piece-color-2: #00ff00; 
-            --piece-color-3: #0000ff;
-            --piece-color-4: #ff00ff;
-            --piece-color-5: #ffff00;
+            --piece-color-1: #ff4d4d;
+            --piece-color-2: #4dff4d;
+            --piece-color-3: #4d4dff;
+            --piece-color-4: #ff4dff;
+            --piece-color-5: #ffff4d;
         }
 
         body {
@@ -26,6 +24,10 @@
             font-family: Arial, sans-serif;
             color: #fff;
             touch-action: none;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             -khtml-user-select: none;
@@ -44,92 +46,106 @@
             width: 100%;
             aspect-ratio: 1;
             background: #16213e;
-            border-radius: 10px;
+            border-radius: 15px;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
-            gap: 2px;
-            padding: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            gap: 3px;
+            padding: 12px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.4);
         }
 
         .cell {
             background: #0f3460;
-            border-radius: 4px;
-            transition: background-color 0.2s;
+            border-radius: 6px;
+            transition: background-color 0.3s ease;
         }
 
         .cell.highlight {
-            background: rgba(76, 175, 80, 0.3);
+            background: rgba(76, 175, 80, 0.4);
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
         }
 
         .cell.invalid {
-            background: rgba(244, 67, 54, 0.3);
+            background: rgba(244, 67, 54, 0.4);
+            box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
         }
 
         .cell.filled {
-            animation: pop 0.3s ease-out;
+            animation: pop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
         .cell.clear-animation {
-            animation: clear 0.5s ease-out;
+            animation: clear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
         @keyframes pop {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.1); }
+            0% { transform: scale(0.7); opacity: 0; }
+            60% { transform: scale(1.1); }
             100% { transform: scale(1); opacity: 1; }
         }
 
         @keyframes clear {
             0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); background: white; }
+            60% { transform: scale(1.2); background: white; }
             100% { transform: scale(0); opacity: 0; }
         }
 
         #pieces {
-            margin-top: 20px;
+            margin-top: 25px;
             display: flex;
             justify-content: space-around;
-            gap: 10px;
+            gap: 15px;
         }
 
         .piece {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 2px;
+            gap: 3px;
             background: #16213e;
-            padding: 5px;
-            border-radius: 8px;
+            padding: 8px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
         .piece:hover {
-            transform: translateY(-5px);
+            transform: translateY(-8px);
+        }
+
+        .piece:active {
+            transform: scale(0.95);
         }
 
         .piece-cell {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             background: #0f3460;
-            border-radius: 2px;
+            border-radius: 4px;
         }
 
         .piece-cell.active {
-            transition: background-color 0.3s;
+            transition: background-color 0.4s;
         }
 
         .dragging {
-            opacity: 0.8;
+            opacity: 0.9;
             position: absolute;
             pointer-events: none;
             z-index: 1000;
+            transform: scale(1.1);
         }
 
-        #score {
-            font-size: 24px;
-            margin: 20px 0;
+        #score, #highscore {
+            font-size: 28px;
+            margin: 25px 0;
             color: #e94560;
+            text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+        }
+
+        #highscore {
+            color: #4dff4d;
+            margin-top: 0;
         }
 
         #game-over {
@@ -138,7 +154,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             display: none;
             justify-content: center;
             align-items: center;
@@ -148,40 +164,52 @@
 
         #game-over.show {
             display: flex;
-            animation: fadeIn 0.5s ease-out;
+            animation: fadeIn 0.6s ease-out;
         }
 
         #game-over button {
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 18px;
+            margin-top: 25px;
+            padding: 12px 25px;
+            font-size: 20px;
             background: #e94560;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             color: white;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.3);
         }
 
         #game-over button:hover {
             transform: scale(1.1);
+            box-shadow: 0 8px 20px rgba(233, 69, 96, 0.4);
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         @media (max-width: 600px) {
             .piece-cell {
-                width: 15px;
-                height: 15px;
+                width: 18px;
+                height: 18px;
+            }
+            
+            #game-container {
+                width: 95vw;
+            }
+            
+            #board {
+                gap: 2px;
+                padding: 8px;
             }
         }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
+    <div id="highscore">High Score: 0</div>
     <div id="game-container">
         <div id="board"></div>
         <div id="pieces"></div>
@@ -189,6 +217,7 @@
     <div id="game-over">
         <h1>Game Over!</h1>
         <p>Final Score: <span id="final-score">0</span></p>
+        <p>High Score: <span id="final-highscore">0</span></p>
         <button onclick="new Game()">Play Again</button>
     </div>
 
@@ -198,15 +227,38 @@
                 this.boardSize = 8;
                 this.board = Array(this.boardSize).fill().map(() => Array(this.boardSize).fill(0));
                 this.score = 0;
+                this.highScore = this.getHighScore();
                 this.dragging = null;
                 this.dragElement = null;
                 this.pieceColors = new Map();
                 this.currentPieceColor = null;
+                this.isFirstMove = true; // Adiciona controle para a primeira jogada
 
                 document.getElementById('game-over').classList.remove('show');
+                document.getElementById('highscore').textContent = `High Score: ${this.highScore}`;
                 this.initBoard();
                 this.initPieces();
                 this.initEvents();
+            }
+
+            getHighScore() {
+                try {
+                    return parseInt(localStorage.getItem('blockosHighScore')) || 0;
+                } catch (e) {
+                    return 0;
+                }
+            }
+
+            setHighScore(score) {
+                try {
+                    if (score > this.highScore) {
+                        this.highScore = score;
+                        localStorage.setItem('blockosHighScore', score.toString());
+                        document.getElementById('highscore').textContent = `High Score: ${score}`;
+                    }
+                } catch (e) {
+                    console.log('LocalStorage não disponível');
+                }
             }
 
             initBoard() {
@@ -223,12 +275,12 @@
 
             generatePiece() {
                 const shapes = [
-                    [[1,1,1], [0,0,0], [0,0,0]], // horizontal 3
-                    [[1,1,0], [1,0,0], [0,0,0]], // L shape
-                    [[1,1], [1,1]], // square
-                    [[1,0,0], [1,1,1], [0,0,0]], // L shape inverted
-                    [[1,1,1], [0,1,0], [0,0,0]], // T shape
-                    [[1,0,0], [1,0,0], [1,0,0]]  // vertical 3 (nova peça)
+                    [[1,1,1], [0,0,0], [0,0,0]],
+                    [[1,1,0], [1,0,0], [0,0,0]],
+                    [[1,1], [1,1]],
+                    [[1,0,0], [1,1,1], [0,0,0]],
+                    [[1,1,1], [0,1,0], [0,0,0]],
+                    [[1,0,0], [1,0,0], [1,0,0]]
                 ];
                 const colors = ['--piece-color-1', '--piece-color-2', '--piece-color-3', '--piece-color-4', '--piece-color-5'];
                 const shape = shapes[Math.floor(Math.random() * shapes.length)];
@@ -283,20 +335,24 @@
                 const pieces = document.querySelectorAll('.piece');
                 let canPlace = false;
 
-                pieces.forEach(piece => {
+                for (let piece of pieces) {
                     const shape = JSON.parse(piece.dataset.shape);
                     for (let row = 0; row < this.boardSize; row++) {
                         for (let col = 0; col < this.boardSize; col++) {
                             if (this.canPlacePiece(row, col, shape)) {
                                 canPlace = true;
-                                return;
+                                break;
                             }
                         }
+                        if (canPlace) break;
                     }
-                });
+                    if (canPlace) break;
+                }
 
                 if (!canPlace) {
+                    this.setHighScore(this.score);
                     document.getElementById('final-score').textContent = this.score;
+                    document.getElementById('final-highscore').textContent = this.highScore;
                     document.getElementById('game-over').classList.add('show');
                 }
             }
@@ -309,6 +365,7 @@
             }
 
             startDrag(e) {
+                e.preventDefault();
                 const touch = e.type === 'touchstart' ? e.touches[0] : e;
                 this.dragging = e.currentTarget;
                 this.currentPieceColor = this.pieceColors.get(this.dragging);
@@ -321,6 +378,7 @@
 
             drag(e) {
                 if (!this.dragElement) return;
+                e.preventDefault();
                 const touch = e.type === 'touchmove' ? e.touches[0] : e;
                 this.dragElement.style.left = (touch.pageX - this.dragElement.offsetWidth/2) + 'px';
                 this.dragElement.style.top = (touch.pageY - this.dragElement.offsetHeight/2) + 'px';
@@ -370,8 +428,7 @@
                         if (shape[row][col]) {
                             const boardRow = startRow + row;
                             const boardCol = startCol + col;
-                            if (boardRow >= this.boardSize || boardCol >= this.boardSize || 
-                                this.board[boardRow][boardCol]) {
+                            if (boardRow >= this.boardSize || boardCol >= this.boardSize) {
                                 return false;
                             }
                         }
@@ -423,6 +480,7 @@
                 this.addNewPiece();
                 this.checkLines();
                 this.checkGameOver();
+                this.checkWinCondition(); // Verifica se o jogador venceu
                 return true;
             }
 
@@ -455,33 +513,33 @@
                         `.cell[data-${isRow ? 'row' : 'col'}="${index}"][data-${isRow ? 'col' : 'row'}="${i}"]`
                     );
                     cell.classList.add('clear-animation');
-                }
-
-                setTimeout(() => {
-                    if (isRow) {
-                        this.board[index].fill(0);
-                    } else {
-                        for (let row = 0; row < this.boardSize; row++) {
-                            this.board[row][index] = 0;
-                        }
-                    }
-                    this.updateBoard();
-                }, 500);
-            }
-
-            updateBoard() {
-                const cells = document.querySelectorAll('.cell');
-                cells.forEach(cell => {
-                    const row = parseInt(cell.dataset.row);
-                    const col = parseInt(cell.dataset.col);
-                    if (this.board[row][col] === 0) {
+                    setTimeout(() => {
                         cell.style.backgroundColor = '';
                         cell.classList.remove('filled', 'clear-animation');
+                    }, 400);
+
+                    if (isRow) {
+                        this.board[index][i] = 0;
+                    } else {
+                        this.board[i][index] = 0;
                     }
-                });
+                }
+            }
+
+            checkWinCondition() {
+                // Verifica se o tabuleiro está completamente vazio (exceto na primeira jogada)
+                if (!this.isFirstMove && this.board.every(row => row.every(cell => cell === 0))) {
+                    this.setHighScore(this.score);
+                    alert('Parabéns! Você venceu o jogo!');
+                    document.getElementById('final-score').textContent = this.score;
+                    document.getElementById('final-highscore').textContent = this.highScore;
+                    document.getElementById('game-over').classList.add('show');
+                }
+                this.isFirstMove = false; // Após a primeira jogada, desativa o controle de primeira jogada
             }
         }
 
+        // Inicia o jogo
         new Game();
     </script>
 </body>
