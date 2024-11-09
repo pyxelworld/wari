@@ -99,7 +99,6 @@
 
         .piece {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
             gap: 3px;
             background: #16213e;
             padding: 8px;
@@ -471,7 +470,10 @@
                         if (shape[row][col]) {
                             const boardRow = startRow + row;
                             const boardCol = startCol + col;
-                            if (boardRow >= this.boardSize || boardCol >= this.boardSize || this.board[boardRow][boardCol]) {
+                            if (boardRow >= this.boardSize || boardCol >= this.boardSize) {
+                                return false;
+                            }
+                            if (!this.allowStacking && this.board[boardRow][boardCol]) {
                                 return false;
                             }
                         }
@@ -488,15 +490,16 @@
                 
                 if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
                     touch.pageY >= rect.top && touch.pageY <= rect.bottom) {
-const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
-                    const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
+                    const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
+const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
                     const shape = JSON.parse(this.dragging.dataset.shape);
-                    
+
                     if (this.canPlacePiece(row, col, shape)) {
                         this.placePiece(row, col, shape);
                         this.dragging.remove();
                         this.addNewPiece();
                         this.updateScore(shape);
+                        this.checkGameOver();
                     }
                 }
 
