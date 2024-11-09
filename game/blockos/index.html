@@ -99,7 +99,7 @@
 
         .piece {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 3px;
             background: #16213e;
             padding: 8px;
@@ -118,8 +118,8 @@
         }
 
         .piece-cell {
-            width: 22px;
-            height: 22px;
+            width: 18px;
+            height: 18px;
             background: #0f3460;
             border-radius: 4px;
         }
@@ -207,8 +207,8 @@
 
         @media (max-width: 600px) {
             .piece-cell {
-                width: 18px;
-                height: 18px;
+                width: 14px;
+                height: 14px;
             }
             
             #game-container {
@@ -304,11 +304,13 @@
                     [[1,0,0], [1,1,1], [0,0,0]],
                     [[1,1,1], [0,1,0], [0,0,0]],
                     [[1,0,0], [1,0,0], [1,0,0]],
-                    [[1,1,1], [1,1,1], [1,1,1]], // Bloco 3x3
-                    [[1,1,1,1]], // Linha de 4
                     [[1,1,1,1,1]], // Linha de 5
-                    [[1,0,0], [1,1,0], [0,1,0]], // Forma L
+                    [[1,1,1,1]], // Linha de 4
+                    [[1,1,1], [1,0,0], [1,0,0]], // Forma L
                     [[0,1,0], [1,1,1]], // Forma T
+                    [[1,1], [0,1]], // Bloco de 2x1
+                    [[1,1,1], [1,0,0]], // Forma L invertida
+                    [[1,1,1], [0,0,1]], // Forma L invertida
                 ];
                 const colors = ['--piece-color-1', '--piece-color-2', '--piece-color-3', '--piece-color-4', '--piece-color-5'];
                 const shape = shapes[Math.floor(Math.random() * shapes.length)];
@@ -323,11 +325,15 @@
                 piece.dataset.shape = JSON.stringify(pieceData.shape);
                 this.pieceColors.set(piece, pieceData.color);
                 
-                for (let row = 0; row < 3; row++) {
-                    for (let col = 0; col < 3; col++) {
+                const maxRow = pieceData.shape.length;
+                const maxCol = pieceData.shape[0].length;
+                piece.style.gridTemplateColumns = `repeat(${maxCol}, 1fr)`;
+                
+                for (let row = 0; row < maxRow; row++) {
+                    for (let col = 0; col < maxCol; col++) {
                         const cell = document.createElement('div');
                         cell.className = 'piece-cell';
-                        if (pieceData.shape[row] && pieceData.shape[row][col]) {
+                        if (pieceData.shape[row][col]) {
                             cell.classList.add('active');
                             cell.style.backgroundColor = `var(${pieceData.color})`;
                         }
@@ -464,7 +470,7 @@
                         if (shape[row][col]) {
                             const boardRow = startRow + row;
                             const boardCol = startCol + col;
-if (boardRow >= this.boardSize || boardCol >= this.boardSize || this.board[boardRow][boardCol]) {
+                            if (boardRow >= this.boardSize || boardCol >= this.boardSize || this.board[boardRow][boardCol]) {
                                 return false;
                             }
                         }
@@ -482,7 +488,7 @@ if (boardRow >= this.boardSize || boardCol >= this.boardSize || this.board[board
                 if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
                     touch.pageY >= rect.top && touch.pageY <= rect.bottom) {
                     const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
-                    const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
+const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
                     const shape = JSON.parse(this.dragging.dataset.shape);
                     
                     if (this.canPlacePiece(row, col, shape)) {
