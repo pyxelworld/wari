@@ -99,7 +99,7 @@
 
         .piece {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 3px;
             background: #16213e;
             padding: 8px;
@@ -308,11 +308,15 @@
                     [[1,1,1], [0,0,1], [0,0,0]], // New shape 2
                     [[1,1,0], [0,1,1], [0,0,0]], // New shape 3
                     [[1,1,1], [1,1,1], [1,1,1]], // New shape 4 (Full block)
-                    [[1,1,1], [0,1,0], [0,0,0]], // New shape 5
-                    [[1,1,0], [1,1,0], [0,0,0]], // New shape 6
-                    [[1,0,0], [1,1,0], [0,1,0]], // New shape 7
-                    [[1,0,0], [1,1,0], [1,0,0]], // New shape 8
-                    [[1,0,0], [1,0,0], [0,0,0]], // New shape 9
+                    [[1,1,1,1], [0,0,0,0], [0,0,0,0]], // 4x1 Line
+                    [[1,0,0,0], [1,0,0,0], [1,0,0,0], [1,0,0,0]], // 1x4 Line
+                    [[1,1,1], [1,0,0], [1,0,0]], // L-shape 3x3
+                    [[1,1,1], [0,1,0], [0,1,0]], // Podium shape
+                    [[1,1,0], [1,1,0], [0,0,0]], // 2x2 Square
+                    [[1,0,0], [1,1,0], [1,0,0]], // New shape 7
+                    [[1,0,0], [1,0,0], [0,0,0]], // Vertical 1x2
+                    [[1,1,1,1], [1,0,0,0], [0,0,0,0]], // 4x3 L-shape
+                    [[1,1,1], [1,1,1], [0,0,0]], // 3x3 Full
                 ];
                 const colors = ['--piece-color-1', '--piece-color-2', '--piece-color-3', '--piece-color-4', '--piece-color-5'];
                 const shape = shapes[Math.floor(Math.random() * shapes.length)];
@@ -327,8 +331,8 @@
                 piece.dataset.shape = JSON.stringify(pieceData.shape);
                 this.pieceColors.set(piece, pieceData.color);
                 
-                for (let row = 0; row < 3; row++) {
-                    for (let col = 0; col < 3; col++) {
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 4; col++) {
                         const cell = document.createElement('div');
                         cell.className = 'piece-cell';
                         if (pieceData.shape[row] && pieceData.shape[row][col]) {
@@ -480,7 +484,7 @@
                 return true;
             }
 
-endDrag(e) {
+            endDrag(e) {
                 if (!this.dragElement) return;
                 const touch = e.type === 'touchend' ? e.changedTouches[0] : e;
                 const board = document.getElementById('board');
@@ -502,6 +506,7 @@ endDrag(e) {
                 this.dragElement = null;
                 this.dragging = null;
                 this.clearHighlight();
+                this.checkGameOver();
             }
 
             placePiece(startRow, startCol, shape) {
