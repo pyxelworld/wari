@@ -98,7 +98,7 @@
         }
 
         .piece {
-            display: grid;
+            display: inline-grid;
             gap: 3px;
             background: #16213e;
             padding: 8px;
@@ -362,6 +362,7 @@
                     for (let i = 0; i < 3; i++) {
                         pieces.appendChild(this.createPieceElement());
                     }
+                    this.checkGameOver(); // Verifica se o jogo acabou após adicionar novas peças
                 }
             }
 
@@ -491,7 +492,7 @@
                 if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
                     touch.pageY >= rect.top && touch.pageY <= rect.bottom) {
                     const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
-const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
+                    const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
                     const shape = JSON.parse(this.dragging.dataset.shape);
 
                     if (this.canPlacePiece(row, col, shape)) {
