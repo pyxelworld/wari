@@ -28,11 +28,6 @@
             position: fixed;
             width: 100%;
             height: 100%;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
         }
 
@@ -280,7 +275,7 @@
                         document.getElementById('highscore').textContent = `High Score: ${score}`;
                     }
                 } catch (e) {
-                    console.log('LocalStorage não disponível');
+                    console.log('LocalStorage not available');
                 }
             }
 
@@ -301,7 +296,6 @@
                     [[1,1,1], [0,0,0], [0,0,0]], // Line
                     [[1,1,0], [1,0,0], [0,0,0]], // L-shape
                     [[1,1], [1,1]], // Square
-                    [[1,0,0], [1,1,1], [0,0,0]], // T-shape
                     [[1,0,0], [1,0,0], [1,0,0]], // Vertical line
                     [[1,1,1], [1,0,0], [0,0,0]], // New shape 1
                     [[1,1,1], [0,0,1], [0,0,0]], // New shape 2
@@ -461,31 +455,16 @@
                                     `.cell[data-row="${boardRow}"][data-col="${boardCol}"]`
                                 );
                                 if (cell) {
-                                    cell.classList.add(isValid ? 'highlight' : 'invalid');
                                     if (isValid) {
-                                        if (this.isRowFull(boardRow)) filledRows.add(boardRow);
-                                        if (this.isColFull(boardCol)) filledCols.add(boardCol);
+                                        cell.classList.add('highlight');
+                                        cell.style.backgroundColor = `var(${this.currentPieceColor})`;
+                                    } else {
+                                        cell.classList.add('invalid');
                                     }
                                 }
                             }
                         }
                     }
-                }
-
-                filledRows.forEach(row => {
-                    for (let col = 0; col < this.boardSize; col++) {
-                        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-                        if (cell) cell.style.backgroundColor = `var(${this.currentPieceColor})`;
-                    }
-                });
-
-                filledCols.forEach(col => {
-                    for (let row = 0; row < this.boardSize; row++) {
-const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-                                if (cell) cell.style.backgroundColor = `var(${this.currentPieceColor})`;
-                            }
-                        }
-                    });
                 }
 
                 isRowFull(row) {
