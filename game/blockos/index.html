@@ -98,7 +98,8 @@
         }
 
         .piece {
-            display: inline-grid;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 3px;
             background: #16213e;
             padding: 8px;
@@ -117,8 +118,8 @@
         }
 
         .piece-cell {
-            width: 18px;
-            height: 18px;
+            width: 22px;
+            height: 22px;
             background: #0f3460;
             border-radius: 4px;
         }
@@ -206,8 +207,8 @@
 
         @media (max-width: 600px) {
             .piece-cell {
-                width: 14px;
-                height: 14px;
+                width: 18px;
+                height: 18px;
             }
             
             #game-container {
@@ -297,20 +298,14 @@
 
             generatePiece() {
                 const shapes = [
-                    [[1,1,1], [0,0,0], [0,0,0]], // Horizontal
-                    [[1], [1], [1]], // Vertical
-                    [[1,1,0], [1,0,0], [0,0,0]], // L
-                    [[1,0], [1,1]], // L invertida
-                    [[1,1], [1,1]], // Quadrado
-                    [[1,0,0], [1,1,1], [0,0,0]], // T
-                    [[0,1,0], [1,1,1]], // T invertida
-                    [[1,0,0], [1,0,0], [1,0,0]], // Linha vertical
-                    [[1,1,1,1,1]], // Linha de 5 horizontal
-                    [[1], [1], [1], [1], [1]], // Linha de 5 vertical
-                    [[1,1,1,1]], // Linha de 4 horizontal
-                    [[1], [1], [1], [1]], // Linha de 4 vertical
-                    [[1,1], [0,1]], // Bloco de 2x1
-                    [[1], [1]], // Bloco de 1x2
+                    [[1,1,1], [0,0,0], [0,0,0]],
+                    [[1,1,0], [1,0,0], [0,0,0]],
+                    [[1,1], [1,1]],
+                    [[1,0,0], [1,1,1], [0,0,0]],
+                    [[1,1,1], [0,1,0], [0,0,0]],
+                    [[1,0,0], [1,0,0], [1,0,0]],
+                    // Add new pieces here
+                    // Example: [[1,1,1,1], [0,0,0,0], [0,0,0,0], [0,0,0,0]]
                 ];
                 const colors = ['--piece-color-1', '--piece-color-2', '--piece-color-3', '--piece-color-4', '--piece-color-5'];
                 const shape = shapes[Math.floor(Math.random() * shapes.length)];
@@ -325,15 +320,11 @@
                 piece.dataset.shape = JSON.stringify(pieceData.shape);
                 this.pieceColors.set(piece, pieceData.color);
                 
-                const maxRow = pieceData.shape.length;
-                const maxCol = pieceData.shape[0].length;
-                piece.style.gridTemplateColumns = `repeat(${maxCol}, 1fr)`;
-                
-                for (let row = 0; row < maxRow; row++) {
-                    for (let col = 0; col < maxCol; col++) {
+                for (let row = 0; row < 3; row++) {
+                    for (let col = 0; col < 3; col++) {
                         const cell = document.createElement('div');
                         cell.className = 'piece-cell';
-                        if (pieceData.shape[row][col]) {
+                        if (pieceData.shape[row] && pieceData.shape[row][col]) {
                             cell.classList.add('active');
                             cell.style.backgroundColor = `var(${pieceData.color})`;
                         }
@@ -362,7 +353,6 @@
                     for (let i = 0; i < 3; i++) {
                         pieces.appendChild(this.createPieceElement());
                     }
-                    this.checkGameOver(); // Verifica se o jogo acabou após adicionar novas peças
                 }
             }
 
@@ -453,11 +443,13 @@
                             const boardRow = startRow + row;
                             const boardCol = startCol + col;
                             if (boardRow < this.boardSize && boardCol < this.boardSize) {
-                                const cell = document.querySelector(
-                                    `.cell[data-row="${boardRow}"][data-col="${boardCol}"]`
-                                );
+const cell = document.querySelector(`.cell[data-row='${boardRow}'][data-col='${boardCol}']`);
                                 if (cell) {
-                                    cell.classList.add(isValid ? 'highlight' : 'invalid');
+                                    if (isValid) {
+                                        cell.classList.add('highlight');
+                                    } else {
+                                        cell.classList.add('invalid');
+                                    }
                                 }
                             }
                         }
@@ -471,10 +463,7 @@
                         if (shape[row][col]) {
                             const boardRow = startRow + row;
                             const boardCol = startCol + col;
-                            if (boardRow >= this.boardSize || boardCol >= this.boardSize) {
-                                return false;
-                            }
-                            if (!this.allowStacking && this.board[boardRow][boardCol]) {
+                            if (boardRow >= this.boardSize || boardCol >= this.boardSize || this.board[boardRow][boardCol]) {
                                 return false;
                             }
                         }
@@ -494,20 +483,18 @@
                     const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
                     const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
                     const shape = JSON.parse(this.dragging.dataset.shape);
-
+                    
                     if (this.canPlacePiece(row, col, shape)) {
                         this.placePiece(row, col, shape);
                         this.dragging.remove();
                         this.addNewPiece();
-                        this.updateScore(shape);
-                        this.checkGameOver();
                     }
                 }
 
-                this.clearHighlight();
                 this.dragElement.remove();
                 this.dragElement = null;
                 this.dragging = null;
+                this.clearHighlight();
             }
 
             placePiece(startRow, startCol, shape) {
@@ -517,7 +504,7 @@
                             const boardRow = startRow + row;
                             const boardCol = startCol + col;
                             this.board[boardRow][boardCol] = 1;
-                            const cell = document.querySelector(`.cell[data-row="${boardRow}"][data-col="${boardCol}"]`);
+                            const cell = document.querySelector(`.cell[data-row='${boardRow}'][data-col='${boardCol}']`);
                             if (cell) {
                                 cell.style.backgroundColor = `var(${this.currentPieceColor})`;
                                 cell.classList.add('filled');
@@ -525,60 +512,57 @@
                         }
                     }
                 }
-                this.clearLines();
+                this.updateScore();
+                this.checkForCompleteLines();
             }
 
-            clearLines() {
-                const rowsToClear = [];
-                const colsToClear = [];
-
-                for (let row = 0; row < this.boardSize; row++) {
-                    if (this.board[row].every(cell => cell === 1)) {
-                        rowsToClear.push(row);
-                    }
-                }
-
-                for (let col = 0; col < this.boardSize; col++) {
-                    if (this.board.every(row => row[col] === 1)) {
-                        colsToClear.push(col);
-                    }
-                }
-
-                rowsToClear.forEach(row => {
-                    for (let col = 0; col < this.boardSize; col++) {
-                        this.board[row][col] = 0;
-                        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-                        if (cell) {
-                            cell.classList.add('clear-animation');
-                            setTimeout(() => {
-                                cell.style.backgroundColor = '#0f3460';
-                                cell.classList.remove('filled', 'clear-animation');
-                            }, 600);
-                        }
-                    }
-                });
-
-                colsToClear.forEach(col => {
-                    for (let row = 0; row < this.boardSize; row++) {
-                        this.board[row][col] = 0;
-                        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-                        if (cell) {
-                            cell.classList.add('clear-animation');
-                            setTimeout(() => {
-                                cell.style.backgroundColor = '#0f3460';
-                                cell.classList.remove('filled', 'clear-animation');
-                            }, 600);
-                        }
-                    }
-                });
-
-                this.score += (rowsToClear.length + colsToClear.length) * 10;
+            updateScore() {
+                this.score += 10;
                 document.getElementById('score').textContent = `Score: ${this.score}`;
             }
 
-            updateScore(shape) {
-                const blocks = shape.flat().reduce((acc, val) => acc + val, 0);
-                this.score += blocks;
+            checkForCompleteLines() {
+                for (let row = 0; row < this.boardSize; row++) {
+                    if (this.board[row].every(cell => cell === 1)) {
+                        this.clearLine(row);
+                    }
+                }
+                for (let col = 0; col < this.boardSize; col++) {
+                    if (this.board.every(row => row[col] === 1)) {
+                        this.clearColumn(col);
+                    }
+                }
+            }
+
+            clearLine(row) {
+                for (let col = 0; col < this.boardSize; col++) {
+                    this.board[row][col] = 0;
+                    const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+                    if (cell) {
+                        cell.classList.add('clear-animation');
+                        setTimeout(() => {
+                            cell.style.backgroundColor = '';
+                            cell.classList.remove('filled', 'clear-animation');
+                        }, 600);
+                    }
+                }
+                this.score += 100;
+                document.getElementById('score').textContent = `Score: ${this.score}`;
+            }
+
+            clearColumn(col) {
+                for (let row = 0; row < this.boardSize; row++) {
+                    this.board[row][col] = 0;
+                    const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+                    if (cell) {
+                        cell.classList.add('clear-animation');
+                        setTimeout(() => {
+                            cell.style.backgroundColor = '';
+                            cell.classList.remove('filled', 'clear-animation');
+                        }, 600);
+                    }
+                }
+                this.score += 100;
                 document.getElementById('score').textContent = `Score: ${this.score}`;
             }
         }
