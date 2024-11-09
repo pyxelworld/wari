@@ -298,19 +298,20 @@
 
             generatePiece() {
                 const shapes = [
-                    [[1,1,1], [0,0,0], [0,0,0]],
-                    [[1,1,0], [1,0,0], [0,0,0]],
-                    [[1,1], [1,1]],
-                    [[1,0,0], [1,1,1], [0,0,0]],
-                    [[1,1,1], [0,1,0], [0,0,0]],
-                    [[1,0,0], [1,0,0], [1,0,0]],
-                    [[1,1,1,1,1]], // Linha de 5
-                    [[1,1,1,1]], // Linha de 4
-                    [[1,1,1], [1,0,0], [1,0,0]], // Forma L
-                    [[0,1,0], [1,1,1]], // Forma T
+                    [[1,1,1], [0,0,0], [0,0,0]], // Horizontal
+                    [[1], [1], [1]], // Vertical
+                    [[1,1,0], [1,0,0], [0,0,0]], // L
+                    [[1,0], [1,1]], // L invertida
+                    [[1,1], [1,1]], // Quadrado
+                    [[1,0,0], [1,1,1], [0,0,0]], // T
+                    [[0,1,0], [1,1,1]], // T invertida
+                    [[1,0,0], [1,0,0], [1,0,0]], // Linha vertical
+                    [[1,1,1,1,1]], // Linha de 5 horizontal
+                    [[1], [1], [1], [1], [1]], // Linha de 5 vertical
+                    [[1,1,1,1]], // Linha de 4 horizontal
+                    [[1], [1], [1], [1]], // Linha de 4 vertical
                     [[1,1], [0,1]], // Bloco de 2x1
-                    [[1,1,1], [1,0,0]], // Forma L invertida
-                    [[1,1,1], [0,0,1]], // Forma L invertida
+                    [[1], [1]], // Bloco de 1x2
                 ];
                 const colors = ['--piece-color-1', '--piece-color-2', '--piece-color-3', '--piece-color-4', '--piece-color-5'];
                 const shape = shapes[Math.floor(Math.random() * shapes.length)];
@@ -487,8 +488,8 @@
                 
                 if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
                     touch.pageY >= rect.top && touch.pageY <= rect.bottom) {
-                    const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
-const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
+const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
+                    const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
                     const shape = JSON.parse(this.dragging.dataset.shape);
                     
                     if (this.canPlacePiece(row, col, shape)) {
