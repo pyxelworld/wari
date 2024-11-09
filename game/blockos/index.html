@@ -303,7 +303,12 @@
                     [[1,1], [1,1]],
                     [[1,0,0], [1,1,1], [0,0,0]],
                     [[1,1,1], [0,1,0], [0,0,0]],
-                    [[1,0,0], [1,0,0], [1,0,0]]
+                    [[1,0,0], [1,0,0], [1,0,0]],
+                    [[1,1,1], [1,1,1], [1,1,1]], // Bloco 3x3
+                    [[1,1,1,1]], // Linha de 4
+                    [[1,1,1,1,1]], // Linha de 5
+                    [[1,0,0], [1,1,0], [0,1,0]], // Forma L
+                    [[0,1,0], [1,1,1]], // Forma T
                 ];
                 const colors = ['--piece-color-1', '--piece-color-2', '--piece-color-3', '--piece-color-4', '--piece-color-5'];
                 const shape = shapes[Math.floor(Math.random() * shapes.length)];
@@ -459,10 +464,7 @@
                         if (shape[row][col]) {
                             const boardRow = startRow + row;
                             const boardCol = startCol + col;
-                            if (boardRow >= this.boardSize || boardCol >= this.boardSize) {
-                                return false;
-                            }
-                            if (!this.allowStacking && this.board[boardRow][boardCol] === 1) {
+if (boardRow >= this.boardSize || boardCol >= this.boardSize || this.board[boardRow][boardCol]) {
                                 return false;
                             }
                         }
@@ -473,126 +475,104 @@
 
             endDrag(e) {
                 if (!this.dragElement) return;
+                const touch = e.type === 'touchend' ? e.changedTouches[0] : e;
                 const board = document.getElementById('board');
                 const rect = board.getBoundingClientRect();
-                const touch = e.type === 'touchend' ? e.changedTouches[0] : e;
-                
-                this.clearHighlight();
                 
                 if (touch.pageX >= rect.left && touch.pageX <= rect.right &&
                     touch.pageY >= rect.top && touch.pageY <= rect.bottom) {
                     const col = Math.floor((touch.pageX - rect.left) / (rect.width / this.boardSize));
                     const row = Math.floor((touch.pageY - rect.top) / (rect.height / this.boardSize));
-                    this.placePiece(row, col, JSON.parse(this.dragging.dataset.shape));
+                    const shape = JSON.parse(this.dragging.dataset.shape);
+                    
+                    if (this.canPlacePiece(row, col, shape)) {
+                        this.placePiece(row, col, shape);
+                        this.dragging.remove();
+                        this.addNewPiece();
+                        this.updateScore(shape);
+                    }
                 }
 
-                document.body.removeChild(this.dragElement);
+                this.clearHighlight();
+                this.dragElement.remove();
                 this.dragElement = null;
                 this.dragging = null;
-                this.currentPieceColor = null;
             }
 
             placePiece(startRow, startCol, shape) {
-                if (!this.canPlacePiece(startRow, startCol, shape)) return false;
-
                 for (let row = 0; row < shape.length; row++) {
                     for (let col = 0; col < shape[row].length; col++) {
                         if (shape[row][col]) {
                             const boardRow = startRow + row;
                             const boardCol = startCol + col;
                             this.board[boardRow][boardCol] = 1;
-                            const cell = document.querySelector(
-                                `.cell[data-row="${boardRow}"][data-col="${boardCol}"]`
-                            );
-                            cell.style.backgroundColor = `var(${this.currentPieceColor})`;
-                            cell.classList.add('filled');
+                            const cell = document.querySelector(`.cell[data-row="${boardRow}"][data-col="${boardCol}"]`);
+                            if (cell) {
+                                cell.style.backgroundColor = `var(${this.currentPieceColor})`;
+                                cell.classList.add('filled');
+                            }
                         }
                     }
                 }
-
-                this.dragging.remove();
-                this.addNewPiece();
-                this.score += 10; // Pontos por colocar blocos
-                document.getElementById('score').textContent = `Score: ${this.score}`;
-                this.checkLines();
-                this.checkGameOver();
-                this.checkWinCondition();
-                return true;
+                this.clearLines();
             }
 
-            checkLines() {
-                let linesCleared = 0;
+            clearLines() {
+                const rowsToClear = [];
+                const colsToClear = [];
 
-                // Verificar linhas completas
                 for (let row = 0; row < this.boardSize; row++) {
                     if (this.board[row].every(cell => cell === 1)) {
-                        this.clearLine(row, 'row');
-                        linesCleared++;
+                        rowsToClear.push(row);
                     }
                 }
 
-                // Verificar colunas completas
                 for (let col = 0; col < this.boardSize; col++) {
                     if (this.board.every(row => row[col] === 1)) {
-                        this.clearLine(col, 'col');
-                        linesCleared++;
+                        colsToClear.push(col);
                     }
                 }
 
-                if (linesCleared > 0) {
-                    this.score += linesCleared * 100; // Pontos por linhas limpas
-                    document.getElementById('score').textContent = `Score: ${this.score}`;
-                }
-            }
-
-            clearLine(index, type) {
-                if (type === 'row') {
+                rowsToClear.forEach(row => {
                     for (let col = 0; col < this.boardSize; col++) {
-                        this.board[index][col] = 0;
-                        const cell = document.querySelector(`.cell[data-row="${index}"][data-col="${col}"]`);
-                        cell.classList.add('clear-animation');
-                        setTimeout(() => {
-                            cell.style.backgroundColor = '#0f3460';
-                            cell.classList.remove('filled', 'clear-animation');
-                        }, 600);
+                        this.board[row][col] = 0;
+                        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                        if (cell) {
+                            cell.classList.add('clear-animation');
+                            setTimeout(() => {
+                                cell.style.backgroundColor = '#0f3460';
+                                cell.classList.remove('filled', 'clear-animation');
+                            }, 600);
+                        }
                     }
-                } else if (type === 'col') {
+                });
+
+                colsToClear.forEach(col => {
                     for (let row = 0; row < this.boardSize; row++) {
-                        this.board[row][index] = 0;
-                        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${index}"]`);
-                        cell.classList.add('clear-animation');
-                        setTimeout(() => {
-                            cell.style.backgroundColor = '#0f3460';
-                            cell.classList.remove('filled', 'clear-animation');
-                        }, 600);
+                        this.board[row][col] = 0;
+                        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                        if (cell) {
+                            cell.classList.add('clear-animation');
+                            setTimeout(() => {
+                                cell.style.backgroundColor = '#0f3460';
+                                cell.classList.remove('filled', 'clear-animation');
+                            }, 600);
+                        }
                     }
-                }
-            }
+                });
 
-            checkWinCondition() {
-                // Verifica se o tabuleiro está completamente vazio (exceto na primeira jogada)
-                if (!this.isFirstMove && this.board.every(row => row.every(cell => cell === 0))) {
-                    this.setHighScore(this.score);
-                    alert('Parabéns! Você venceu o jogo!');
-                    document.getElementById('final-score').textContent = this.score;
-                    document.getElementById('final-highscore').textContent = this.highScore;
-                    document.getElementById('game-over').classList.add('show');
-                }
-                this.isFirstMove = false; // Após a primeira jogada, desativa o controle de primeira jogada
-            }
-
-            resetGame() {
-                this.board = Array(this.boardSize).fill().map(() => Array(this.boardSize).fill(0));
-                this.score = 0;
+                this.score += (rowsToClear.length + colsToClear.length) * 10;
                 document.getElementById('score').textContent = `Score: ${this.score}`;
-                this.initBoard();
-                this.initPieces();
+            }
+
+            updateScore(shape) {
+                const blocks = shape.flat().reduce((acc, val) => acc + val, 0);
+                this.score += blocks;
+                document.getElementById('score').textContent = `Score: ${this.score}`;
             }
         }
 
-        window.onload = () => {
-            new Game();
-        };
+        new Game();
     </script>
 </body>
 </html>
