@@ -11,6 +11,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             background-color: #1a2a3a;
             color: #e0e0e0;
             min-height: 100vh;
@@ -31,6 +32,12 @@
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            max-width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         #board {
             display: grid;
@@ -39,21 +46,24 @@
             border-radius: 10px;
             padding: 10px;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+            position: relative;
         }
         .tile {
-            width: 80px;
-            height: 80px;
             background: linear-gradient(135deg, #3498db, #2980b9);
             border-radius: 10px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 24px;
             font-weight: bold;
             color: #fff;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: absolute;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
         .tile:hover {
             transform: scale(1.05);
@@ -68,8 +78,9 @@
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
+            align-items: center;
         }
-        button {
+        button, select {
             margin: 10px;
             padding: 12px 24px;
             font-size: 16px;
@@ -81,12 +92,12 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        button:hover {
+        button:hover, select:hover {
             background: linear-gradient(45deg, #2980b9, #3498db);
             transform: translateY(-2px);
             box-shadow: 0 6px 8px rgba(0,0,0,0.2);
         }
-        #moves {
+        #stats {
             margin-top: 20px;
             font-size: 18px;
             background-color: #2c3e50;
@@ -101,14 +112,15 @@
             color: #bdc3c7;
         }
         @media (max-width: 600px) {
-            .tile {
-                width: 60px;
-                height: 60px;
-                font-size: 20px;
+            h1 {
+                font-size: 2rem;
             }
-            button {
+            button, select {
                 padding: 10px 20px;
                 font-size: 14px;
+            }
+            #stats {
+                font-size: 16px;
             }
         }
     </style>
@@ -116,27 +128,41 @@
 <body>
     <h1>Quaderos</h1>
     <div id="controls">
-        <button onclick="startGame(3)">Fácil (3x3)</button>
-        <button onclick="startGame(4)">Médio (4x4)</button>
-        <button onclick="startGame(5)">Difícil (5x5)</button>
+        <select id="size-select" onchange="startGame()">
+            <option value="3">3x3</option>
+            <option value="4">4x4</option>
+            <option value="5">5x5</option>
+            <option value="6">6x6</option>
+            <option value="7">7x7</option>
+            <option value="8">8x8</option>
+            <option value="9">9x9</option>
+            <option value="10">10x10</option>
+        </select>
     </div>
     <div id="game-container">
         <div id="board"></div>
     </div>
-    <div id="moves">Movimentos: 0</div>
-    <div id="instructions">Clique nos quadrados adjacentes ao espaço vazio para movê-los.</div>
+    <div id="stats">
+        <span id="moves">Movimentos: 0</span>
+        <span id="time" style="margin-left: 20px;">Tempo: 00:00</span>
+    </div>
+    <div id="instructions">Clique ou deslize os quadrados adjacentes ao espaço vazio para movê-los.</div>
     <script>
-        let size, tiles, emptyTile, moveCount;
+        let size, tiles, emptyTile, moveCount, timeElapsed, timerInterval, tileSize;
+        let startX, startY, startTime;
 
-        function startGame(n) {
-            size = n;
+        function startGame() {
+            size = parseInt(document.getElementById('size-select').value);
             tiles = Array.from({length: size * size - 1}, (_, i) => i + 1);
             tiles.push(0);
             emptyTile = size * size - 1;
             moveCount = 0;
+            timeElapsed = 0;
+            clearInterval(timerInterval);
             shuffleTiles();
             createBoard();
-            updateMoveCount();
+            updateStats();
+            startTimer();
         }
 
         function shuffleTiles() {
@@ -161,35 +187,120 @@
 
         function createBoard() {
             const board = document.getElementById('board');
+            const gameContainer = document.getElementById('game-container');
             board.innerHTML = '';
             board.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            
+            const maxSize = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.6, 500);
+            tileSize = Math.floor((maxSize - (size + 1) * 5) / size);
+            
+            const boardSize = tileSize * size + (size + 1) * 5;
+            gameContainer.style.width = `${boardSize}px`;
+            gameContainer.style.height = `${boardSize}px`;
+            board.style.width = `${boardSize - 10}px`;
+            board.style.height = `${boardSize - 10}px`;
             
             for (let i = 0; i < tiles.length; i++) {
                 const tile = document.createElement('div');
                 tile.className = 'tile';
+                tile.style.width = `${tileSize}px`;
+                tile.style.height = `${tileSize}px`;
+                tile.style.fontSize = `${tileSize / 2.5}px`;
+                tile.style.left = `${(i % size) * (tileSize + 5) + 5}px`;
+                tile.style.top = `${Math.floor(i / size) * (tileSize + 5) + 5}px`;
                 if (tiles[i] === 0) {
                     tile.classList.add('empty');
                 } else {
                     tile.textContent = tiles[i];
                 }
                 tile.addEventListener('click', () => moveTile(i));
+                tile.addEventListener('mousedown', handleStart);
+                tile.addEventListener('touchstart', handleStart);
                 board.appendChild(tile);
+            }
+
+            board.addEventListener('mousemove', handleMove);
+            board.addEventListener('mouseup', handleEnd);
+            board.addEventListener('touchmove', handleMove);
+            board.addEventListener('touchend', handleEnd);
+        }
+
+        function handleStart(e) {
+            const touch = e.type === 'touchstart' ? e.touches[0] : e;
+            startX = touch.clientX;
+            startY = touch.clientY;
+            startTime = new Date().getTime();
+        }
+
+        function handleMove(e) {
+            if (!startX || !startY) return;
+            e.preventDefault();
+        }
+
+        function handleEnd(e) {
+            if (!startX || !startY) return;
+
+            const touch = e.type === 'touchend' ? e.changedTouches[0] : e;
+            const endX = touch.clientX;
+            const endY = touch.clientY;
+            const endTime = new Date().getTime();
+
+            const distX = endX - startX;
+            const distY = endY - startY;
+            const duration = endTime - startTime;
+
+            if (duration < 300 && Math.abs(distX) + Math.abs(distY) > tileSize / 4) {
+                const direction = Math.abs(distX) > Math.abs(distY)
+                    ? (distX > 0 ? 'right' : 'left')
+                    : (distY > 0 ? 'down' : 'up');
+
+                const tileIndex = getTileIndexFromDirection(direction);
+                if (tileIndex !== -1) {
+                    moveTile(tileIndex);
+                }
+            }
+
+            startX = null;
+            startY = null;
+        }
+
+        function getTileIndexFromDirection(direction) {
+            const emptyRow = Math.floor(emptyTile / size);
+            const emptyCol = emptyTile % size;
+
+            switch (direction) {
+                case 'up': return emptyRow < size - 1 ? emptyTile + size : -1;
+                case 'down': return emptyRow > 0 ? emptyTile - size : -1;
+                case 'left': return emptyCol < size - 1 ? emptyTile + 1 : -1;
+                case 'right': return emptyCol > 0 ? emptyTile - 1 : -1;
+                default: return -1;
             }
         }
 
         function moveTile(index) {
             if (isAdjacent(index, emptyTile)) {
-                tiles[emptyTile] = tiles[index];
-                tiles[index] = 0;
-                emptyTile = index;
-                moveCount++;
-                createBoard();
-                updateMoveCount();
-                if (checkWin()) {
-                    setTimeout(() => {
-                        alert(`Parabéns! Você venceu em ${moveCount} movimentos!`);
-                    }, 100);
-                }
+                const tile = document.querySelectorAll('.tile')[index];
+                const emptyTileElement = document.querySelectorAll('.tile')[emptyTile];
+                
+                const dx = (emptyTile % size - index % size) * (tileSize + 5);
+                const dy = (Math.floor(emptyTile / size) - Math.floor(index / size)) * (tileSize + 5);
+                
+                tile.style.transform = `translate(${dx}px, ${dy}px)`;
+                emptyTileElement.style.transform = `translate(${-dx}px, ${-dy}px)`;
+                
+                setTimeout(() => {
+                    [tiles[emptyTile], tiles[index]] = [tiles[index], tiles[emptyTile]];
+                    emptyTile = index;
+                    moveCount++;
+                    createBoard();
+                    updateStats();
+                    if (checkWin()) {
+                        clearInterval(timerInterval);
+                        setTimeout(() => {
+                            alert(`Parabéns! Você venceu em ${moveCount} movimentos e ${formatTime(timeElapsed)}!`);
+                        }, 100);
+                    }
+                }, 300);
             }
         }
 
@@ -208,11 +319,26 @@
             return true;
         }
 
-        function updateMoveCount() {
+        function updateStats() {
             document.getElementById('moves').textContent = `Movimentos: ${moveCount}`;
+            document.getElementById('time').textContent = `Tempo: ${formatTime(timeElapsed)}`;
         }
 
-        startGame(3);
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeElapsed++;
+                updateStats();
+            }, 1000);
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        window.addEventListener('resize', createBoard);
+        startGame();
     </script>
 </body>
 </html>
