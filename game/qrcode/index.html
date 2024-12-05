@@ -195,7 +195,9 @@
                 { facingMode: currentCamera },
                 config,
                 onScanSuccess
-            );
+            ).catch(error => {
+                // Removed camera error logging
+            });
         }
 
         function onScanSuccess(decodedText, decodedResult) {
