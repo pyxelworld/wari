@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hit the Box X</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0d1117; /* Even darker overall background */
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+        }
+
+        /* Screen Overlays (Start, Game Over, Pause, Shop, Settings) */
+        #startScreen, #gameOverScreen, #pauseScreen, #shopScreen, #settingsScreen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            background-color: rgba(10, 15, 25, 0.92);
+            backdrop-filter: blur(8px);
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #FFFFFF;
+            font-size: clamp(2.2rem, 5.5vmin, 3.8rem);
+            margin-bottom: 20px;
+            text-shadow: 0px 4px 8px rgba(0,0,0,0.4);
+            font-weight: 700;
+        }
+         h2 {
+            color: #e0e0e0;
+            font-size: clamp(1.5rem, 4vmin, 2.5rem);
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        p {
+            color: #c0c0c0;
+            font-size: clamp(0.9rem, 2.2vmin, 1.4rem);
+            margin-bottom: 15px;
+        }
+
+        button, .shopItem button, .settingsContent button {
+            padding: 12px 25px;
+            font-size: clamp(0.85rem, 2vmin, 1.2rem);
+            background-color: #007BFF; /* Modern Blue */
+            color: white;
+            border: none;
+            cursor: pointer;
+            z-index: 20;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+            font-weight: 600;
+            margin: 8px;
+            min-width: 150px;
+        }
+        button.secondary {
+             background-color: #6c757d; /* Grey for secondary actions */
+        }
+        button.shop {
+            background-color: #28a745; /* Green for shop specific */
+        }
+         button.settings {
+            background-color: #ffc107; /* Yellow for settings */
+            color: #333;
+        }
+
+
+        button:hover, .shopItem button:hover, .settingsContent button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+        button.shop:hover {
+            background-color: #218838;
+        }
+        button.settings:hover {
+            background-color: #e0a800;
+        }
+
+        button:active, .shopItem button:active, .settingsContent button:active {
+            transform: scale(0.97) translateY(0px);
+        }
+        button:disabled, .shopItem button:disabled {
+            background-color: #5a6268;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+
+        #gameCanvas {
+            /* background-color will be set by JS gameSettings */
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #gameInfo {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: clamp(0.75rem, 1.8vmin, 1.1rem);
+            color: #FFFFFF;
+            pointer-events: none; /* Allow clicks to pass through to canvas if needed */
+        }
+        #gameInfoLeft, #gameInfoRight {
+            display: flex;
+            align-items: center;
+        }
+
+        .infoBox {
+            background-color: rgba(30, 40, 55, 0.7);
+            border-radius: 6px;
+            padding: 7px 10px;
+            margin-right: 8px;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .infoBox span {
+            background-color: #FFD700;
+            color: #1A232E;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-left: 7px;
+            font-weight: 700;
+        }
+        #pauseButton.infoBox {
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            pointer-events: all; /* Make pause button clickable */
+             background-color: #dc3545; /* Red for pause */
+        }
+        #pauseButton.infoBox:hover {
+            background-color: #c82333; /* Darker red on hover */
+        }
+        #coinsDisplay {
+            /* Specific styling if needed */
+        }
+         #livesDisplay img, #livesDisplay svg { /* Adjusted to include SVG */
+            width: clamp(16px, 3vmin, 20px);
+            height: clamp(16px, 3vmin, 20px);
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        .heart-icon { fill: #FF4136; } /* Red heart */
+        .shield-icon { fill: #00E0E0; margin-left: 5px; vertical-align: middle;} /* Cyan shield */
+
+
+        /* Shop & Settings Specific Styles */
+        .shopGrid, .settingsContent {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .shopItem, .settingRow {
+            background-color: rgba(40, 50, 70, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            width: clamp(280px, 40%, 350px); /* Adjusted width slightly */
+            box-shadow: 0 3px 7px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .shopItem h3, .settingRow label {
+            color: #FFD700;
+            margin-bottom: 8px;
+            font-size: clamp(1rem, 2.5vmin, 1.4rem);
+        }
+        .shopItem p {
+            font-size: clamp(0.8rem, 2vmin, 1.1rem);
+            margin-bottom: 12px;
+            color: #d0d0d0;
+            min-height: 3em; /* Ensure consistent height for description */
+        }
+        .shopItem .cost {
+            font-weight: bold;
+            color: #90ee90; /* Light green for cost */
+            margin-bottom: 10px;
+        }
+        .settingRow label {
+            display: block; /* Make label take full width */
+            margin-bottom: 8px;
+            color: #FFD700;
+        }
+        .settingRow input[type="color"] {
+            width: 80px;
+            height: 40px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+         .settingRow input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .settingRow input[type="color"]::-webkit-color-swatch {
+            border-radius: 5px;
+            border: 1px solid #555;
+        }
+
+        /* Scrollbar styling for shop/settings */
+        .shopGrid::-webkit-scrollbar, .settingsContent::-webkit-scrollbar {
+            width: 8px;
+        }
+        .shopGrid::-webkit-scrollbar-track, .settingsContent::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .shopGrid::-webkit-scrollbar-thumb, .settingsContent::-webkit-scrollbar-thumb {
+            background: #007BFF;
+            border-radius: 10px;
+        }
+        .shopGrid::-webkit-scrollbar-thumb:hover, .settingsContent::-webkit-scrollbar-thumb:hover {
+            background: #0056b3;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen">
+            <h1>Hit the Box X</h1>
+            <p>Use o mouse para controlar a raquete. Destrua as caixas!</p>
+            <button id="playButton">Jogar</button>
+            <button id="shopButtonStart" class="shop">Loja de Power-ups</button>
+            <button id="settingsButtonStart" class="settings">Configurações</button>
+        </div>
+
+        <div id="gameOverScreen" style="display: none;">
+            <h1>Você Perdeu! 😂</h1>
+            <p>Recorde: <span id="highScore" style="color: #FFD700; font-weight: bold;">0</span></p>
+            <p>Moedas Ganhas nesta partida: <span id="coinsEarnedSession" style="color: #90ee90; font-weight: bold;">0</span></p>
+            <button id="restartButton">Jogar Novamente</button>
+            <button id="shopButtonGameOver" class="shop">Ir para Loja</button>
+             <button id="mainMenuButtonGameOver" class="secondary">Menu Principal</button>
+        </div>
+
+       
+         <div id="pauseScreen" style="display: none;">
+            <h1>Pausado</h1>
+            <button id="resumeButton">Continuar</button>
+            <button id="shopButtonPause" class="shop">Loja de Power-ups</button>
+            <button id="settingsButtonPause" class="settings">Configurações</button>
+            <button id="mainMenuButtonPause" class="secondary">Menu Principal</button>
+        </div>
+
+        <div id="shopScreen" style="display: none;">
+       
+             <h2>Loja de Power-ups 🛍️</h2>
+            <p>Moedas Atuais: <span id="shopCoins" style="color: #FFD700; font-weight: bold;">0</span></p>
+            <div class="shopGrid">
+                <div class="shopItem">
+                    <h3>+1 Vida Inicial ❤️</h3>
+                    <p>Comece o próximo jogo com uma vida extra. (Máx: 3 vidas totais)</p>
+                     <p class="cost">Custo: 150 Moedas</p> <button id="buyExtraLife">Comprar</button>
+                </div>
+                <div class="shopItem">
+                    <h3>Bola Arco-Íris 🌈</h3>
+                    <p>Sua bola mudará de cor constantemente no próximo jogo!</p>
+                    <p class="cost">Custo: 50 Moedas</p> <button id="buyRainbowBall">Comprar</button>
+                </div>
+                <div class="shopItem">
+                    <h3>Raquete Maior ↔️</h3>
+                    <p>Sua raquete será 20% maior no próximo jogo.</p>
+                    <p class="cost">Custo: 180 Moedas</p> <button id="buyWiderPaddle">Comprar</button>
+                </div>
+                <div class="shopItem">
+                    <h3>Caixas Maiores 🧱➡️</h3>
+                    <p>As caixas ficam 25% maiores no próximo jogo. Mais fáceis de acertar!</p>
+                    <p class="cost">Custo: 200 Moedas</p>
+                    <button id="buyBiggerBoxes">Comprar</button>
+                </div>
+                <div class="shopItem">
+                    <h3>Bola Explosiva 💣</h3>
+                    <p>Ao atingir uma caixa, caixas próximas também explodem! (Próximo jogo)</p>
+                    <p class="cost">Custo: 200 Moedas</p>
+                    <button id="buyExplosiveBall">Comprar</button>
+                </div>
+                <div class="shopItem">
+                    <h3>Escudo da Raquete 🛡️</h3>
+                    <p>Aguenta uma pancada da bola sem perder vida. (Próximo jogo, 1 uso)</p>
+                    <p class="cost">Custo: 150 Moedas</p>
+                    <button id="buyPaddleShield">Comprar</button>
+                </div>
+                <div class="shopItem">
+                    <h3>Moedas em Dobro 💰x2</h3>
+                    <p>Ganhe o dobro de moedas por caixa destruída no próximo jogo.</p>
+                    <p class="cost">Custo: 100 Moedas</p>
+                    <button id="buyDoubleCoins">Comprar</button>
+                </div>
+            </div>
+            <button id="closeShopButton" class="secondary">Voltar</button>
+        </div>
+
+        
+        <div id="settingsScreen" style="display: none;">
+            <h2>Configurações de Aparência 🎨</h2>
+            <div class="settingsContent">
+                <div class="settingRow">
+                    <label for="ballColorPicker">Cor da Bola:</label>
+                    <input type="color" id="ballColorPicker">
+                </div>
+                <div class="settingRow">
+                    <label for="paddleColorPicker">Cor da Raquete:</label>
+                    <input type="color" id="paddleColorPicker">
+                </div>
+                <div class="settingRow">
+                    <label for="boxColorPicker">Cor das Caixas:</label>
+                    <input type="color" id="boxColorPicker">
+                </div>
+                <div class="settingRow">
+                    <label for="bgColorPicker">Cor do Fundo do Jogo:</label>
+                    <input type="color" id="bgColorPicker">
+                </div>
+            </div>
+            <button id="saveSettingsButton">Salvar e Aplicar</button>
+            <button id="closeSettingsButton" class="secondary">Voltar</button> </div>
+
+      
+        <canvas id="gameCanvas"></canvas>
+        <div id="gameInfo">
+            <div id="gameInfoLeft">
+                <div class="infoBox">Pontos <span id="score">0</span></div>
+                <div class="infoBox">Moedas <span id="coinsDisplay">0</span></div>
+                <div class="infoBox" id="livesDisplay">Vidas </div>
+                <div class="infoBox" id="pauseButton">Pausar</div>
+            </div>
+            <div id="gameInfoRight">
+                <div class="infoBox">Fase <span id="level">1</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const shopScreen = document.getElementById('shopScreen');
+        const settingsScreen = document.getElementById('settingsScreen');
+
+        const playButton = document.getElementById('playButton');
+        const restartButton = document.getElementById('restartButton');
+        const resumeButton = document.getElementById('resumeButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const scoreElement = document.getElementById('score');
+        const levelElement = document.getElementById('level');
+        const highScoreElement = document.getElementById('highScore');
+        const coinsDisplay = document.getElementById('coinsDisplay');
+        const livesDisplay = document.getElementById('livesDisplay');
+        const coinsEarnedSessionElement = document.getElementById('coinsEarnedSession');
+
+
+        // Shop Buttons & UI
+        const shopButtonStart = document.getElementById('shopButtonStart');
+        const shopButtonPause = document.getElementById('shopButtonPause');
+        const shopButtonGameOver = document.getElementById('shopButtonGameOver');
+        const closeShopButton = document.getElementById('closeShopButton');
+        const shopCoinsElement = document.getElementById('shopCoins');
+        const buyExtraLifeButton = document.getElementById('buyExtraLife');
+        const buyRainbowBallButton = document.getElementById('buyRainbowBall');
+        const buyWiderPaddleButton = document.getElementById('buyWiderPaddle');
+        // New shop item buttons
+        const buyBiggerBoxesButton = document.getElementById('buyBiggerBoxes');
+        const buyExplosiveBallButton = document.getElementById('buyExplosiveBall');
+        const buyPaddleShieldButton = document.getElementById('buyPaddleShield');
+        const buyDoubleCoinsButton = document.getElementById('buyDoubleCoins');
+
+        // Settings Buttons & UI
+        const settingsButtonStart = document.getElementById('settingsButtonStart');
+        const settingsButtonPause = document.getElementById('settingsButtonPause');
+        const closeSettingsButton = document.getElementById('closeSettingsButton');
+        const saveSettingsButton = document.getElementById('saveSettingsButton');
+        const ballColorPicker = document.getElementById('ballColorPicker');
+        const paddleColorPicker = document.getElementById('paddleColorPicker');
+        const boxColorPicker = document.getElementById('boxColorPicker');
+        const bgColorPicker = document.getElementById('bgColorPicker');
+
+        const mainMenuButtonGameOver = document.getElementById('mainMenuButtonGameOver');
+        const mainMenuButtonPause = document.getElementById('mainMenuButtonPause');
+
+
+        let ball, paddle, boxes;
+        let score = 0;
+        let level = 1;
+        let lives = 1;
+        let currentShields = 0; // For paddle shield
+        let coins = 0;
+        let sessionCoinsEarned = 0;
+        let animationId;
+        let isGameRunning = false;
+        let isDemo = true;
+        let isPaused = false;
+        let highScore = localStorage.getItem('hitTheBoxRevolutionHighScore') || 0;
+        
+        // Game settings
+        let gameSettings = {
+            ballColor: '#FF1E56',   // Vibrant Red
+            paddleColor: '#00E0E0', // Cyan
+            boxColor: '#2ECC40',    // Vibrant Green
+            canvasBgColor: '#1A232E', // Dark Navy/Charcoal
+            rainbowBallActive: false,
+            widerPaddleActive: false,
+            // New power-up flags
+            biggerBoxesActive: false,
+            explosiveBallActive: false,
+            paddleShieldPurchased: false, // To activate shield at game start
+            doubleCoinsActive: false,
+            startingLives: 1
+        };
+        let baseBoxWidth, baseBoxHeight, currentBoxWidth, currentBoxHeight, ballRadius, paddleHeight, basePaddleWidth, currentPaddleWidth; // Added baseBox dimensions
+        const boxCornerRadius = 8;
+        const paddleCornerRadius = 5;
+        const shieldColor = '#00A0FF'; // A color for the shield, slightly different from paddle
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // --- LOCALSTORAGE FUNCTIONS ---
+        function loadGameSettings() {
+            const savedSettings = JSON.parse(localStorage.getItem('hitTheBoxRevolutionSettings'));
+            if (savedSettings) {
+                gameSettings = { ...gameSettings, ...savedSettings };
+            }
+            // Ensure power-ups are reset for a new game session unless bought again
+            gameSettings.rainbowBallActive = false;
+            gameSettings.widerPaddleActive = false;
+            gameSettings.biggerBoxesActive = false;
+            gameSettings.explosiveBallActive = false;
+            gameSettings.paddleShieldPurchased = false;
+            gameSettings.doubleCoinsActive = false;
+
+
+            const purchasedUpgrades = JSON.parse(localStorage.getItem('hitTheBoxRevolutionUpgrades')) || {};
+            gameSettings.startingLives = purchasedUpgrades.startingLives || 1;
+
+            ballColorPicker.value = gameSettings.ballColor;
+            paddleColorPicker.value = gameSettings.paddleColor;
+            boxColorPicker.value = gameSettings.boxColor;
+            bgColorPicker.value = gameSettings.canvasBgColor;
+        }
+
+        function saveGameSettings() {
+            const settingsToSave = {
+                ballColor: gameSettings.ballColor,
+                paddleColor: gameSettings.paddleColor,
+                boxColor: gameSettings.boxColor,
+                canvasBgColor: gameSettings.canvasBgColor
+            };
+            localStorage.setItem('hitTheBoxRevolutionSettings', JSON.stringify(settingsToSave));
+
+            const upgradesToSave = {
+                startingLives: gameSettings.startingLives
+            };
+            localStorage.setItem('hitTheBoxRevolutionUpgrades', JSON.stringify(upgradesToSave));
+        }
+
+        function loadCoins() {
+            coins = parseInt(localStorage.getItem('hitTheBoxRevolutionCoins') || 0);
+            updateCoinsDisplay();
+        }
+
+        function saveCoins() {
+            localStorage.setItem('hitTheBoxRevolutionCoins', coins);
+        }
+
+        function updateCoinsDisplay() {
+            coinsDisplay.textContent = coins;
+            shopCoinsElement.textContent = coins;
+        }
+
+
+        // --- RESIZE & DRAWING ---
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.backgroundColor = gameSettings.canvasBgColor;
+
+            if (isMobile) {
+                baseBoxWidth = Math.min(canvas.width * 0.17, 65); // Renamed to baseBoxWidth
+                baseBoxHeight = Math.min(canvas.height * 0.04, 30); // Renamed to baseBoxHeight
+                ballRadius = Math.min(canvas.width, canvas.height) * 0.025;
+                paddleHeight = Math.min(canvas.height * 0.023, 11);
+                basePaddleWidth = Math.min(canvas.width * 0.20, 100);
+            } else {
+                baseBoxWidth = Math.min(canvas.width * 0.11, 85); // Renamed to baseBoxWidth
+                baseBoxHeight = Math.min(canvas.height * 0.055, 40); // Renamed to baseBoxHeight
+                ballRadius = Math.min(canvas.width, canvas.height) * 0.018;
+                paddleHeight = Math.min(canvas.height * 0.028, 16);
+                basePaddleWidth = Math.min(canvas.width * 0.14, 130);
+            }
+            currentPaddleWidth = gameSettings.widerPaddleActive ? basePaddleWidth * 1.2 : basePaddleWidth;
+            currentBoxWidth = gameSettings.biggerBoxesActive ? baseBoxWidth * 1.25 : baseBoxWidth; // Apply bigger boxes
+            currentBoxHeight = gameSettings.biggerBoxesActive ? baseBoxHeight * 1.25 : baseBoxHeight; // Apply bigger boxes
+
+
+            if (ball) {
+                ball.radius = ballRadius;
+                ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
+                ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius - paddleHeight, ball.y));
+            }
+            if (paddle) {
+                paddle = new Paddle((canvas.width - currentPaddleWidth) / 2);
+            }
+            if (boxes && boxes.length > 0 && (isGameRunning || isDemo)) {
+                if (isGameRunning) createBoxes(false); 
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        
+        function drawRoundedRect(x, y, width, height, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // --- GAME CLASSES ---
+        class Ball {
+            constructor(x, y, dx, dy, radius) {
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+                this.radius = radius;
+                this.color = gameSettings.ballColor;
+                this.hue = 0;
+                this.isRainbow = gameSettings.rainbowBallActive;
+            }
+
+            draw() {
+                if (this.isRainbow) {
+                    this.hue = (this.hue + 2) % 360; 
+                    ctx.fillStyle = `hsl(${this.hue}, 100%, 65%)`;
+                } else {
+                    ctx.fillStyle = gameSettings.ballColor;
+                }
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            move() {
+                this.x += this.dx;
+                this.y += this.dy;
+
+                if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+                    this.dx = -this.dx;
+                    this.x = Math.max(this.radius, Math.min(this.x, canvas.width - this.radius));
+                }
+                if (this.y - this.radius < 0) {
+                    this.dy = -this.dy;
+                    this.y = this.radius;
+                }
+                if (this.y + this.radius > paddle.y &&
+                    this.y - this.radius < paddle.y + paddle.height &&
+                    this.x + this.radius > paddle.x &&
+                    this.x - this.radius < paddle.x + paddle.width) {
+                    this.dy = -Math.abs(this.dy); 
+                    this.y = paddle.y - this.radius;
+                    const paddleCenter = paddle.x + paddle.width / 2;
+                    const impact = (this.x - paddleCenter) / (paddle.width / 2);
+                    this.dx += impact * (isMobile ? 2.5 : 2); 
+
+                    const maxHorizontalSpeedRatio = 0.020; 
+                    const maxSpeed = canvas.width * maxHorizontalSpeedRatio;
+                    this.dx = Math.max(Math.min(this.dx, maxSpeed), -maxSpeed);
+                }
+                if (this.y + this.radius > canvas.height) {
+                    if (isGameRunning) {
+                        handleLifeLoss();
+                    } else {
+                        this.dy = -this.dy;
+                        this.y = canvas.height - this.radius;
+                    }
+                }
+            }
+
+            updateSpeed() { // No slow-mo start logic here anymore
+                let baseSpeedFactor = isMobile ? 0.020 : 0.012;
+                const speedIncreaseFactor = 0.0015; 
+
+                const baseSpeed = Math.min(canvas.width, canvas.height) * baseSpeedFactor;
+                const speed = baseSpeed + (level - 1) * (Math.min(canvas.width, canvas.height) * speedIncreaseFactor);
+                const currentSpeed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+                if (currentSpeed === 0) {
+                    this.dx = speed * (Math.random() > 0.5 ? 1 : -1);
+                    this.dy = -speed;
+                    return;
+                }
+                const factor = speed / currentSpeed;
+                this.dx *= factor;
+                this.dy *= factor;
+            }
+        }
+
+        class Paddle {
+            constructor(x) {
+                this.width = currentPaddleWidth;
+                this.height = paddleHeight;
+                this.x = x;
+                this.y = canvas.height - this.height - 15;
+                this.color = gameSettings.paddleColor;
+            }
+            draw() {
+                const displayColor = currentShields > 0 ? shieldColor : this.color;
+                drawRoundedRect(this.x, this.y, this.width, this.height, paddleCornerRadius, displayColor);
+                if (currentShields <= 0) { // Only draw highlight if no shield
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.fillRect(this.x + paddleCornerRadius/2, this.y + paddleCornerRadius/2, this.width - paddleCornerRadius, this.height/3);
+                }
+            }
+            move(mouseX) {
+                this.x = mouseX - this.width / 2;
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+            }
+            autoMove() {
+                const targetX = ball.x - this.width / 2;
+                const diff = targetX - this.x;
+                this.x += diff * 0.12; 
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+            }
+        }
+
+        class Box {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = currentBoxWidth; // Use currentBoxWidth
+                this.height = currentBoxHeight; // Use currentBoxHeight
+                this.color = gameSettings.boxColor;
+            }
+            draw() {
+                drawRoundedRect(this.x, this.y, this.width, this.height, boxCornerRadius, this.color);
+            }
+        }
+
+        // --- GAME LOGIC ---
+        function createBoxes(incrementLevel = true) { 
+            boxes = [];
+            let boxCount;
+            const baseBoxCount = isDemo ? 8 : (level * 2 + 4); 
+            const maxBoxes = isMobile ? 18 : 25;
+            boxCount = Math.min(baseBoxCount, maxBoxes);
+
+            // No reduceBoxesActive logic anymore
+
+            const maxAttempts = boxCount * 15;
+            let attempts = 0;
+
+            for (let i = 0; i < boxCount && attempts < maxAttempts; i++) {
+                let x, y, overlapping;
+                do {
+                    overlapping = false;
+                    x = Math.random() * (canvas.width - currentBoxWidth * 1.1) + currentBoxWidth * 0.05; // Use currentBoxWidth
+                    y = Math.random() * (canvas.height / 2.2 - currentBoxHeight) + currentBoxHeight * 0.3; // Use currentBoxHeight
+                    for (let j = 0; j < boxes.length; j++) {
+                        const otherBox = boxes[j];
+                        if (x < otherBox.x + otherBox.width + 8 && 
+                            x + currentBoxWidth + 8 > otherBox.x && // Use currentBoxWidth
+                            y < otherBox.y + otherBox.height + 8 &&
+                            y + currentBoxHeight + 8 > otherBox.y) { // Use currentBoxHeight
+                            overlapping = true;
+                            break;
+                        }
+                    }
+                    attempts++;
+                } while (overlapping && attempts < maxAttempts);
+
+                if (!overlapping) {
+                    boxes.push(new Box(x, y));
+                }
+            }
+             if (boxes.length === 0 && !isDemo && isGameRunning) { 
+                console.warn("Could not place enough boxes, forcing one.");
+                boxes.push(new Box(canvas.width/2 - currentBoxWidth/2, canvas.height/4)); // Use currentBoxWidth
+            }
+        }
+
+        function checkCollision() {
+            for (let i = boxes.length - 1; i >= 0; i--) {
+                const box = boxes[i];
+                if (ball.x + ball.radius > box.x &&
+                    ball.x - ball.radius < box.x + box.width &&
+                    ball.y + ball.radius > box.y &&
+                    ball.y - ball.radius < box.y + box.height) {
+
+                    const overlapLeft = (ball.x + ball.radius) - box.x;
+                    const overlapRight = (box.x + box.width) - (ball.x - ball.radius);
+                    const overlapTop = (ball.y + ball.radius) - box.y;
+                    const overlapBottom = (box.y + box.height) - (ball.y - ball.radius);
+                    const minOverlapX = Math.min(overlapLeft, overlapRight);
+                    const minOverlapY = Math.min(overlapTop, overlapBottom);
+                    if (minOverlapX < minOverlapY) {
+                        ball.dx = -ball.dx;
+                        if (overlapLeft < overlapRight) ball.x = box.x - ball.radius;
+                        else ball.x = box.x + box.width + ball.radius;
+                    } else {
+                        ball.dy = -ball.dy;
+                        if (overlapTop < overlapBottom) ball.y = box.y - ball.radius;
+                        else ball.y = box.y + box.height + ball.radius;
+                    }
+
+                    const hitBoxX = box.x;
+                    const hitBoxY = box.y;
+                    const hitBoxWidth = box.width; // Store before splice
+                    const hitBoxHeight = box.height; // Store before splice
+
+                    boxes.splice(i, 1);
+                    
+                    if (isGameRunning) {
+                        score++;
+                        const coinsEarned = gameSettings.doubleCoinsActive ? 2 : 1;
+                        coins += coinsEarned;
+                        sessionCoinsEarned += coinsEarned;
+                        scoreElement.textContent = score;
+                        updateCoinsDisplay();
+                        updateHighScore();
+
+                        // Explosive Ball Logic
+                        if (gameSettings.explosiveBallActive) {
+                            const explosionRadius = currentBoxWidth * 1.8; // Based on current box width
+                            for (let j = boxes.length - 1; j >= 0; j--) {
+                                const otherBox = boxes[j];
+                                // Check distance from center of hit box to center of other box
+                                const distX = (hitBoxX + hitBoxWidth / 2) - (otherBox.x + otherBox.width / 2);
+                                const distY = (hitBoxY + hitBoxHeight / 2) - (otherBox.y + otherBox.height / 2);
+                                const distance = Math.sqrt(distX * distX + distY * distY);
+
+                                if (distance < explosionRadius) {
+                                    boxes.splice(j, 1);
+                                    // No i-- adjustment needed here because we are iterating downwards and splice is on 'j'
+                                    score++; // Award score for exploded boxes
+                                    const explodedCoins = gameSettings.doubleCoinsActive ? 2 : 1;
+                                    coins += explodedCoins;
+                                    sessionCoinsEarned += explodedCoins;
+                                    // No need to update score/coins display here, will be done after main hit processing
+                                }
+                            }
+                            scoreElement.textContent = score; // Update score after potential explosions
+                            updateCoinsDisplay(); // Update coins after potential explosions
+                        }
+
+
+                        if (boxes.length === 0) {
+                            level++;
+                            levelElement.textContent = level;
+                            resetBall();
+                            ball.updateSpeed();
+                            createBoxes();
+                        }
+                    }
+                    break; 
+                }
+            }
+        }
+
+        function updateLivesDisplay() {
+            let contentHtml = 'Vidas ';
+            for (let i = 0; i < lives; i++) {
+                contentHtml += `<svg class="heart-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+            }
+            if (currentShields > 0) {
+                 contentHtml += `<svg class="shield-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M12 2L2 5v6.09C2 16.14 6.47 21.14 12 22c5.53-.86 10-5.86 10-10.91V5l-10-3zm0 2.09L18.09 6.5V11c0 3.25-2.81 6.15-6.09 6.91V4.09zM5.91 6.5L12 4.09v13.82C8.81 17.15 6 14.25 6 11V6.5z"></path></svg>`;
+            }
+            livesDisplay.innerHTML = contentHtml;
+        }
+
+
+        function handleLifeLoss() {
+            if (currentShields > 0) {
+                currentShields--;
+                updateLivesDisplay();
+                resetBall(); // Reset ball position after shield breaks
+                // Add a sound or visual effect for shield break if desired
+                return; // Don't lose a life
+            }
+
+            lives--;
+            updateLivesDisplay();
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                isPaused = true; 
+                setTimeout(() => {
+                    resetBall();
+                    isPaused = false; 
+                    if (!animationId && (isGameRunning || isDemo)) { 
+                        animationId = requestAnimationFrame(update);
+                    }
+                }, 500); 
+            }
+        }
+
+        function resetBall() {
+            let initialSpeedFactor = isMobile ? 0.020 : 0.012;
+            // No slowMoStartActive check here
+            const initialSpeed = Math.min(canvas.width, canvas.height) * initialSpeedFactor;
+            ball = new Ball(
+                paddle.x + paddle.width / 2,
+                paddle.y - ballRadius - 5, 
+                initialSpeed * (Math.random() > 0.5 ? 0.6 : -0.6), 
+                -initialSpeed,
+                ballRadius
+            );
+            if (isGameRunning) {
+                ball.updateSpeed();
+            }
+        }
+
+        function updateGameElements() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            ctx.fillStyle = gameSettings.canvasBgColor; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height); 
+            if (ball) ball.draw();
+            if (paddle) paddle.draw();
+            if (boxes) boxes.forEach(box => box.draw());
+        }
+
+        function update() {
+            if (!isPaused) {
+                updateGameElements();
+                if (ball) ball.move();
+                if (boxes) checkCollision();
+                if (isDemo && paddle) {
+                    paddle.autoMove();
+                }
+            }
+            animationId = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            if (animationId) cancelAnimationFrame(animationId);
+            
+            const purchasedUpgrades = JSON.parse(localStorage.getItem('hitTheBoxRevolutionUpgrades')) || {};
+            gameSettings.startingLives = purchasedUpgrades.startingLives || 1;
+
+            // Apply paddle shield if purchased
+            currentShields = gameSettings.paddleShieldPurchased ? 1 : 0;
+            gameSettings.paddleShieldPurchased = false; // Consumed for this game
+
+            isGameRunning = true;
+            isDemo = false;
+            isPaused = false;
+            score = 0;
+            level = 1;
+            lives = gameSettings.startingLives;
+            sessionCoinsEarned = 0;
+            scoreElement.textContent = score;
+            levelElement.textContent = level;
+            updateHighScoreDisplay();
+            updateLivesDisplay(); // Will show shield if active
+            updateCoinsDisplay(); 
+
+            resizeCanvas(); // Critical: This now applies biggerBoxesActive and widerPaddleActive to sizes
+            paddle = new Paddle((canvas.width - currentPaddleWidth) / 2);
+            resetBall(); 
+            createBoxes();
+
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            pauseScreen.style.display = 'none';
+            shopScreen.style.display = 'none';
+            settingsScreen.style.display = 'none';
+
+            update();
+        }
+
+        function gameOver() {
+            isGameRunning = false;
+            gameOverScreen.style.display = 'flex';
+            coinsEarnedSessionElement.textContent = sessionCoinsEarned;
+            cancelAnimationFrame(animationId);
+            animationId = null;
+            updateHighScore();
+            updateHighScoreDisplay();
+            saveCoins(); 
+
+            // Reset temporary power-ups for next game
+            gameSettings.rainbowBallActive = false;
+            gameSettings.widerPaddleActive = false;
+            gameSettings.biggerBoxesActive = false; // Reset bigger boxes
+            gameSettings.explosiveBallActive = false; // Reset explosive ball
+            gameSettings.paddleShieldPurchased = false; // Ensure it's not carried over if game ended prematurely
+            gameSettings.doubleCoinsActive = false; // Reset double coins
+            currentShields = 0; // Reset shield count
+        }
+
+        function startDemo() {
+            if (animationId) cancelAnimationFrame(animationId);
+            isDemo = true;
+            isGameRunning = false;
+            isPaused = false;
+            level = 1; 
+            lives = 1; 
+            currentShields = 0; // No shield in demo
+
+            // Reset power-ups for demo appearance
+            gameSettings.rainbowBallActive = false;
+            gameSettings.widerPaddleActive = false;
+            gameSettings.biggerBoxesActive = false; // No bigger boxes in demo by default
+            gameSettings.explosiveBallActive = false;
+            gameSettings.paddleShieldPurchased = false;
+            gameSettings.doubleCoinsActive = false;
+
+
+            resizeCanvas(); // This will use base sizes as flags are false
+            currentPaddleWidth = basePaddleWidth; // Ensure currentPaddleWidth is reset for demo
+            currentBoxWidth = baseBoxWidth; // Ensure currentBoxWidth is reset for demo
+            currentBoxHeight = baseBoxHeight; // Ensure currentBoxHeight is reset for demo
+
+            paddle = new Paddle((canvas.width - currentPaddleWidth) / 2); 
+            resetBall();
+            if (ball) { 
+                const demoSpeedFactor = isMobile ? 0.015 : 0.008;
+                const demoSpeed = Math.min(canvas.width, canvas.height) * demoSpeedFactor;
+                ball.dx = demoSpeed * (Math.random() > 0.5 ? 0.5 : -0.5);
+                ball.dy = -demoSpeed;
+            }
+            createBoxes();
+
+            startScreen.style.display = 'flex';
+            gameOverScreen.style.display = 'none';
+            pauseScreen.style.display = 'none';
+            shopScreen.style.display = 'none';
+            settingsScreen.style.display = 'none';
+
+            updateCoinsDisplay(); 
+            updateLivesDisplay(); 
+            update();
+        }
+
+
+        function updateHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('hitTheBoxRevolutionHighScore', highScore);
+            }
+        }
+        function updateHighScoreDisplay() {
+            highScoreElement.textContent = highScore;
+        }
+
+        function togglePause() {
+            if (!isGameRunning && !isDemo) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseScreen.style.display = 'flex';
+                if(animationId) cancelAnimationFrame(animationId); 
+                animationId = null;
+            } else {
+                pauseScreen.style.display = 'none';
+                shopScreen.style.display = 'none'; 
+                settingsScreen.style.display = 'none';
+                if (isGameRunning || isDemo) {
+                    if(!animationId) animationId = requestAnimationFrame(update); 
+                }
+            }
+        }
+
+        // --- UI NAVIGATION ---
+        function showShop() {
+            isPaused = true;
+            if (animationId && (isGameRunning || isDemo)) { 
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            shopScreen.style.display = 'flex';
+            startScreen.style.display = 'none';
+            pauseScreen.style.display = 'none'; 
+            gameOverScreen.style.display = 'none';
+            updateCoinsDisplay(); 
+        }
+
+        function closeShop() {
+            shopScreen.style.display = 'none';
+            if (isGameRunning || isDemo) { 
+                 if (pauseScreen.style.display !== 'flex') { 
+                    isPaused = false; 
+                 }
+                if (!isPaused && !animationId) animationId = requestAnimationFrame(update); 
+            }
+            if (gameOverScreen.style.display === 'flex') {
+                // Stay on game over screen
+            } else if (document.getElementById('pauseButton').offsetParent !== null && isGameRunning) { 
+               pauseScreen.style.display = 'flex'; 
+            } else {
+                 startScreen.style.display = 'flex'; 
+                 if(!isDemo && !isGameRunning) startDemo(); 
+            }
+        }
+
+
+        function showSettings() {
+            isPaused = true; 
+             if (animationId && (isGameRunning || isDemo)) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            settingsScreen.style.display = 'flex';
+            startScreen.style.display = 'none';
+            pauseScreen.style.display = 'none';
+        }
+
+        function closeSettings() {
+            settingsScreen.style.display = 'none';
+            if (isGameRunning || isDemo) {
+                if (pauseScreen.style.display !== 'flex') {
+                    isPaused = false;
+                }
+                if(!isPaused && !animationId) animationId = requestAnimationFrame(update);
+            }
+             if (document.getElementById('pauseButton').offsetParent !== null && isGameRunning) {
+                 pauseScreen.style.display = 'flex';
+            } else {
+                 startScreen.style.display = 'flex';
+                 if(!isDemo && !isGameRunning) startDemo();
+            }
+        }
+
+        mainMenuButtonGameOver.addEventListener('click', () => {
+            gameOverScreen.style.display = 'none';
+            startDemo(); 
+        });
+        mainMenuButtonPause.addEventListener('click', () => {
+            isPaused = false; 
+            if(animationId) cancelAnimationFrame(animationId);
+            animationId = null;
+            pauseScreen.style.display = 'none';
+            startDemo(); 
+        });
+        // --- EVENT LISTENERS ---
+        canvas.addEventListener('mousemove', (e) => {
+            if (isGameRunning && !isPaused && paddle) {
+                const rect = canvas.getBoundingClientRect();
+                paddle.move(e.clientX - rect.left);
+            }
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            if (isGameRunning && !isPaused && paddle) {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                paddle.move(e.touches[0].clientX - rect.left);
+            }
+        }, { passive: false });
+        canvas.addEventListener('touchstart', (e) => {
+            if (isGameRunning && !isPaused && paddle) {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                paddle.move(e.touches[0].clientX - rect.left);
+            }
+        }, { passive: false });
+        playButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+        resumeButton.addEventListener('click', togglePause);
+        pauseButton.addEventListener('click', () => {
+            if(isGameRunning || isDemo) togglePause();
+        });
+        shopButtonStart.addEventListener('click', showShop);
+        shopButtonPause.addEventListener('click', showShop);
+        shopButtonGameOver.addEventListener('click', showShop);
+        closeShopButton.addEventListener('click', closeShop);
+
+        settingsButtonStart.addEventListener('click', showSettings);
+        settingsButtonPause.addEventListener('click', showSettings);
+        closeSettingsButton.addEventListener('click', closeSettings);
+        saveSettingsButton.addEventListener('click', () => {
+            gameSettings.ballColor = ballColorPicker.value;
+            gameSettings.paddleColor = paddleColorPicker.value;
+            gameSettings.boxColor = boxColorPicker.value;
+            gameSettings.canvasBgColor = bgColorPicker.value;
+            saveGameSettings();
+            resizeCanvas(); 
+            if (isDemo && !isGameRunning && !isPaused) { 
+                updateGameElements();
+            }
+            alert("Configurações salvas!");
+        });
+        
+        // Shop item listeners
+        buyExtraLifeButton.addEventListener('click', () => {
+            const cost = 150; // Updated cost
+            if (coins >= cost && gameSettings.startingLives < 3) {
+                coins -= cost;
+                gameSettings.startingLives++;
+                saveCoins();
+                saveGameSettings(); 
+                updateCoinsDisplay();
+                alert(`Você comprou +1 Vida Inicial! Agora você começará com ${gameSettings.startingLives} vidas.`);
+                 buyExtraLifeButton.disabled = gameSettings.startingLives >= 3;
+                 if(buyExtraLifeButton.disabled) buyExtraLifeButton.textContent = "Máx Atingido";
+            } else if (gameSettings.startingLives >= 3) {
+                alert("Você já tem o máximo de vidas iniciais!");
+            } else {
+                alert("Moedas insuficientes!");
+            }
+        });
+        buyRainbowBallButton.addEventListener('click', () => {
+            const cost = 50; // Updated cost
+            if (coins >= cost) {
+                coins -= cost;
+                gameSettings.rainbowBallActive = true; 
+                saveCoins();
+                updateCoinsDisplay();
+                alert("Bola Arco-Íris comprada para o próximo jogo!");
+            } else {
+                alert("Moedas insuficientes!");
+            }
+        });
+        buyWiderPaddleButton.addEventListener('click', () => {
+            const cost = 180; // Updated cost
+            if (coins >= cost) {
+                coins -= cost;
+                gameSettings.widerPaddleActive = true; 
+                saveCoins();
+                updateCoinsDisplay();
+                alert("Raquete Maior comprada para o próximo jogo!");
+            } else {
+                alert("Moedas insuficientes!");
+            }
+        });
+
+        // --- New Power-up Listeners ---
+        buyBiggerBoxesButton.addEventListener('click', () => {
+            const cost = 200;
+            if (coins >= cost) {
+                coins -= cost;
+                gameSettings.biggerBoxesActive = true;
+                saveCoins();
+                updateCoinsDisplay();
+                alert("Caixas Maiores compradas para o próximo jogo!");
+            } else {
+                alert("Moedas insuficientes!");
+            }
+        });
+
+        buyExplosiveBallButton.addEventListener('click', () => {
+            const cost = 200;
+            if (coins >= cost) {
+                coins -= cost;
+                gameSettings.explosiveBallActive = true;
+                saveCoins();
+                updateCoinsDisplay();
+                alert("Bola Explosiva comprada para o próximo jogo!");
+            } else {
+                alert("Moedas insuficientes!");
+            }
+        });
+
+        buyPaddleShieldButton.addEventListener('click', () => {
+            const cost = 150;
+            if (coins >= cost) {
+                coins -= cost;
+                gameSettings.paddleShieldPurchased = true; // This flag will be checked at startGame
+                saveCoins();
+                updateCoinsDisplay();
+                alert("Escudo da Raquete comprado para o próximo jogo!");
+            } else {
+                alert("Moedas insuficientes!");
+            }
+        });
+        
+        buyDoubleCoinsButton.addEventListener('click', () => {
+            const cost = 100;
+            if (coins >= cost) {
+                coins -= cost;
+                gameSettings.doubleCoinsActive = true;
+                saveCoins();
+                updateCoinsDisplay();
+                alert("Moedas em Dobro compradas para o próximo jogo!");
+            } else {
+                alert("Moedas insuficientes!");
+            }
+        });
+
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                if (shopScreen.style.display === 'flex' || settingsScreen.style.display === 'flex') return; 
+
+                if (gameOverScreen.style.display === 'flex') {
+                    startGame();
+                } else if (startScreen.style.display === 'flex') {
+                    startGame();
+                } else if (isGameRunning || isDemo) {
+                    togglePause();
+                 }
+            }
+            if (e.key === 'Escape') { 
+                if (pauseScreen.style.display === 'flex') {
+                    togglePause(); 
+                } else if (shopScreen.style.display === 'flex') {
+                    closeShop();
+                } else if (settingsScreen.style.display === 'flex') {
+                    closeSettings();
+                } else if (isGameRunning && !isPaused) { 
+                    togglePause();
+                }
+            }
+        });
+        // Initial setup
+        loadGameSettings();
+        loadCoins();
+        updateHighScoreDisplay();
+        startDemo();
+
+    </script>
+</body>
+</html>
