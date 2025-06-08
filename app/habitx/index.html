@@ -114,6 +114,12 @@
             color: white;
         }
         .icon-btn:hover { transform: scale(1.2); }
+        
+        #startPauseTimerBtn:disabled {
+            background-color: #4ade80; /* green-500 */
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body class="gradient-bg text-white overflow-hidden h-screen">
@@ -238,9 +244,14 @@
     <!-- Icon Picker Modal -->
     <div id="iconModal" class="modal-container fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60] hidden">
         <div class="modal-content glass-effect w-full max-w-md p-6 rounded-2xl shadow-2xl">
-            <h2 class="text-xl font-bold mb-4 text-center">Escolha um Ícone</h2>
-            <div id="iconGrid" class="grid grid-cols-6 gap-4 max-h-64 overflow-y-auto"></div>
-            <button id="closeIconModalBtn" class="w-full mt-4 bg-slate-600 hover:bg-slate-700 font-bold py-2 rounded-xl control-btn active:scale-95">Fechar</button>
+            <h2 class="text-xl font-bold mb-2 text-center">Escolha um Ícone</h2>
+            <p class="text-center text-slate-400 mb-4 text-sm">Cole seu emoji abaixo ou escolha uma sugestão.</p>
+            
+            <input type="text" id="emojiInput" maxlength="2" placeholder="✨" class="w-full text-center text-4xl bg-slate-900/70 p-2 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
+            
+            <div id="iconGrid" class="grid grid-cols-6 gap-4 max-h-48 overflow-y-auto border-t border-slate-700 pt-4"></div>
+            
+            <button id="confirmIconBtn" class="w-full mt-4 bg-purple-600 hover:bg-purple-700 font-bold py-2 rounded-xl control-btn active:scale-95">Confirmar</button>
         </div>
     </div>
 
@@ -293,7 +304,8 @@
         // Icon Modal
         const iconModal = document.getElementById('iconModal');
         const iconGrid = document.getElementById('iconGrid');
-        const closeIconModalBtn = document.getElementById('closeIconModalBtn');
+        const confirmIconBtn = document.getElementById('confirmIconBtn');
+        const emojiInput = document.getElementById('emojiInput');
         
         // Detail View
         const habitDetailView = document.getElementById('habitDetailView');
@@ -309,6 +321,10 @@
         let activeDetailHabit = null;
         let touchStartX = 0;
         let touchEndX = 0;
+        // Timer State
+        let timerInterval = null;
+        let isTimerRunning = false;
+        let timerSeconds_internal = 0; // Tracks live timer seconds
         
         // --- Constants ---
         const ICONS = ['🎯', '📚', '💧', '🧘', '🏃', '🏋️', '🥦', '😴', '✍️', '📅', '🎨', '🎵', '🧹', '💰', '🧑‍💻', '🎮', '❤️', '🗣️', '🚶', '🌱', '☀️', '⭐', '💡', '🔑'];
@@ -320,6 +336,12 @@
             d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
             return d.toISOString().split('T')[0];
         }
+
+        const formatTime = (totalSeconds) => {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        };
         
         // --- Date & Swipe Logic ---
         const changeDate = (days) => {
@@ -460,14 +482,19 @@
                     text = historyEntry.completed ? 'Concluído!' : 'Pendente';
                     break;
                 case 'measurable':
-                case 'timed':
                     const goal = habit.goal || 1;
                     percentage = Math.min((historyEntry.value / goal) * 100, 100);
                     text = `${historyEntry.value} / ${goal} ${habit.unit || ''}`;
                     if (percentage >= 100) text = `🎉 Concluído!`;
                     break;
+                case 'timed':
+                    const timeGoal = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
+                    percentage = timeGoal > 0 ? Math.min((historyEntry.value / timeGoal) * 100, 100) : 0;
+                    text = `${historyEntry.value || 0} / ${timeGoal} min`;
+                    if (percentage >= 100) text = `🎉 Concluído!`;
+                    break;
             }
-            return { percentage, value: historyEntry.value, text, completed: historyEntry.completed || percentage >= 100 };
+            return { percentage, value: historyEntry.value || 0, text, completed: historyEntry.completed || percentage >= 100 };
         };
 
         const updateOverallProgress = (habitsForDay, date) => {
@@ -541,10 +568,19 @@
             ).join('');
             iconGrid.querySelectorAll('.icon-btn').forEach(btn => btn.onclick = () => selectIcon(btn.textContent));
         };
+        
         const selectIcon = (icon) => {
-            habitIconInput.value = icon;
-            openIconModalBtn.textContent = icon;
-            closeModal(iconModal);
+            emojiInput.value = icon;
+            updateIconSelection();
+        };
+
+        const updateIconSelection = () => {
+            const emoji = emojiInput.value;
+            // Simple validation to allow most single characters/emojis
+            if(emoji) {
+                habitIconInput.value = emoji;
+                openIconModalBtn.textContent = emoji;
+            }
         };
         
         // --- Frequency Logic ---
@@ -595,6 +631,9 @@
         };
 
         const closeDetailView = () => {
+            if (isTimerRunning) {
+                pauseTimer();
+            }
             habitDetailView.style.transform = 'translateX(100%)';
             appContainer.classList.remove('modal-open');
             activeDetailHabit = null;
@@ -613,6 +652,10 @@
             document.getElementById('calendarContainer').innerHTML = getDetailCalendarHTML(activeDetailHabit);
             document.getElementById('statsContainer').innerHTML = getDetailStatsHTML(activeDetailHabit);
             
+            // Clear any existing timer interval
+            if (timerInterval) clearInterval(timerInterval);
+            isTimerRunning = false;
+
             // Re-attach listeners for dynamically created content
             const detailToggleBtn = document.getElementById('detailToggleBtn');
             if (detailToggleBtn) detailToggleBtn.onclick = () => {
@@ -624,20 +667,35 @@
             if(detailPlusBtn) detailPlusBtn.onclick = () => handleDetailInteractionUpdate(1);
             const detailMinusBtn = document.getElementById('detailMinusBtn');
             if(detailMinusBtn) detailMinusBtn.onclick = () => handleDetailInteractionUpdate(-1);
+
+            if (activeDetailHabit.type === 'timed') {
+                const currentMinutes = getHabitProgress(activeDetailHabit, dateStr).value || 0;
+                timerSeconds_internal = currentMinutes * 60;
+                updateTimerDisplay(); // Initial display update
+
+                document.getElementById('startPauseTimerBtn').onclick = () => isTimerRunning ? pauseTimer() : startTimer();
+                document.getElementById('resetProgressBtn').onclick = resetTimedProgress;
+                 document.getElementById('completeTimedHabitBtn')?.addEventListener('click', completeTimedHabit);
+                document.querySelectorAll('.quick-add-btn').forEach(btn => {
+                    btn.onclick = () => addTimeToHabit(parseInt(btn.dataset.minutes));
+                });
+            }
         };
 
         function getDetailLogHTML(progress) {
-            const isCompleted = progress.percentage >= 100;
             const habit = activeDetailHabit;
             let displayHTML = '', controlsHTML = '';
+            const dateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+
+            let headerHTML = `<h3 class="font-bold text-lg mb-4">Progresso para <span class="text-purple-300">${dateText}</span></h3>`;
 
             switch (habit.type) {
                 case 'yes_no':
+                    const isCompleted = progress.completed;
                     displayHTML = `<i class="fas ${isCompleted ? 'fa-check-circle text-green-400' : 'fa-circle text-slate-500'} text-5xl transition-all"></i>`;
                     controlsHTML = `<button id="detailToggleBtn" class="w-full ${isCompleted ? 'bg-slate-600' : 'bg-purple-500'} text-white font-bold py-3 rounded-xl text-lg control-btn active:scale-95">${isCompleted ? 'Desmarcar' : 'Concluir Hábito'}</button>`;
                     break;
                 case 'measurable':
-                case 'timed':
                     displayHTML = `<span class="text-4xl font-bold">${progress.value}</span><span class="text-slate-400 ml-2">${habit.unit || ''}</span>`;
                     controlsHTML = `
                         <div class="flex justify-center items-center space-x-4">
@@ -645,15 +703,58 @@
                             <button id="detailPlusBtn" aria-label="Aumentar progresso" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl font-light control-btn active:scale-90">+</button>
                         </div>`;
                     break;
+                case 'timed':
+                    const goalInMinutes = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
+                    const loggedMinutes = progress.value || 0;
+                    const remainingMinutes = Math.max(0, goalInMinutes - loggedMinutes);
+                    const isGoalReached = remainingMinutes <= 0;
+
+                    const allQuickAddButtons = [1, 5, 10];
+                    const quickAddButtonsHTML = allQuickAddButtons
+                        .filter(min => min <= remainingMinutes) // Only show buttons if time is remaining
+                        .map(min => `<button data-minutes="${min}" class="quick-add-btn flex-1 bg-purple-800/60 p-3 rounded-lg control-btn text-sm">+${min} min</button>`)
+                        .join('');
+
+                    const completeButtonHTML = !isGoalReached ? `
+                        <button id="completeTimedHabitBtn" title="Completar Meta" class="h-full flex items-center justify-center bg-green-500/80 hover:bg-green-500 rounded-lg control-btn text-white px-4">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    ` : '';
+
+                    headerHTML = `<h3 class="font-bold text-lg mb-2">Cronômetro</h3>`;
+                    displayHTML = `
+                        <div class="relative w-48 h-48 mx-auto my-2">
+                            <svg class="w-full h-full" viewBox="0 0 132 132">
+                                <circle class="stroke-current text-purple-900/70" cx="66" cy="66" r="60" fill="none" stroke-width="12"></circle>
+                                <circle id="timerProgressCircle" class="progress-ring-circle stroke-current ${isGoalReached ? 'text-green-400' : 'text-purple-400'}" cx="66" cy="66" r="60" fill="none" stroke-width="12" stroke-linecap="round" style="stroke-dasharray: 377; stroke-dashoffset: 377;"></circle>
+                            </svg>
+                            <div id="timerDisplayText" class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-4xl font-bold tracking-wider">00:00</span>
+                                <span class="text-slate-400 text-sm">/ ${goalInMinutes} min</span>
+                            </div>
+                        </div>`;
+                    controlsHTML = `
+                        <div class="flex items-center justify-center space-x-4 mb-4">
+                            <button id="startPauseTimerBtn" class="w-32 bg-purple-500 text-white font-bold py-3 rounded-xl text-lg control-btn active:scale-95 flex items-center justify-center gap-2" ${isGoalReached ? 'disabled' : ''}>
+                                ${isGoalReached ? 'Concluído' : '<i class="fas fa-play"></i> Iniciar'}
+                            </button>
+                            <button id="resetProgressBtn" aria-label="Resetar progresso" class="w-16 h-12 rounded-xl bg-slate-600 control-btn active:scale-95 flex items-center justify-center text-lg"><i class="fas fa-undo"></i></button>
+                        </div>
+                        ${(quickAddButtonsHTML || completeButtonHTML) ? `
+                        <p class="text-xs text-center mb-2 text-slate-400">Ajuste manual:</p>
+                        <div class="flex gap-2 justify-center h-12">
+                            ${quickAddButtonsHTML}
+                            ${completeButtonHTML}
+                        </div>
+                        ` : ''}
+                    `;
+                    break;
             }
 
-            return `
-                <h3 class="font-bold text-lg mb-4">Progresso para <span class="text-purple-300">${selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</span></h3>
-                <div class="flex items-center justify-center mb-4 min-h-[60px]">${displayHTML}</div>
-                <div>${controlsHTML}</div>`;
+            return `${headerHTML}<div class="flex items-center justify-center mb-4 min-h-[60px]">${displayHTML}</div><div>${controlsHTML}</div>`;
         }
 
-        function getDetailCalendarHTML(habit) { /* Generates and returns HTML string for calendar */ 
+        function getDetailCalendarHTML(habit) {
              const viewDate = new Date();
              const year = viewDate.getFullYear();
              const month = viewDate.getMonth();
@@ -684,9 +785,7 @@
              `;
         }
 
-        function getDetailStatsHTML(habit) { /* Generates and returns HTML string for stats */ 
-            // This is a complex calculation, keeping it brief for demonstration
-            // In a real app, this would be a more robust calculation function
+        function getDetailStatsHTML(habit) {
             const history = habit.history || {};
             const completedCount = Object.values(history).filter(v => v.completed).length;
             
@@ -708,13 +807,86 @@
             updateDetailViewUI();
         };
 
+        // --- Timer Functions ---
+        const startTimer = () => {
+            if (isTimerRunning) return;
+            isTimerRunning = true;
+            document.getElementById('startPauseTimerBtn').innerHTML = '<i class="fas fa-pause mr-2"></i> Pausar';
+
+            timerInterval = setInterval(() => {
+                timerSeconds_internal++;
+                updateTimerDisplay();
+            }, 1000);
+        };
+
+        const pauseTimer = () => {
+            if (!isTimerRunning) return;
+            isTimerRunning = false;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            
+            saveTimerProgress();
+            updateDetailViewUI(); // Refresh UI to reflect paused state and new progress
+        };
+
+        const resetTimedProgress = () => {
+            pauseTimer();
+            timerSeconds_internal = 0;
+            updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), 0);
+            updateDetailViewUI();
+        };
+        
+        const addTimeToHabit = (minutesToAdd) => {
+            timerSeconds_internal += minutesToAdd * 60;
+            saveTimerProgress();
+            updateDetailViewUI();
+        };
+        
+        const completeTimedHabit = () => {
+            pauseTimer();
+            const goalInMinutes = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
+            updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), goalInMinutes);
+            updateDetailViewUI();
+        };
+
+        const saveTimerProgress = () => {
+            const totalMinutes = Math.floor(timerSeconds_internal / 60);
+            const dateStr = toISODateString(selectedDate);
+            updateHabitProgress(activeDetailHabit.id, dateStr, totalMinutes);
+        };
+
+        const updateTimerDisplay = () => {
+            const timerTextEl = document.getElementById('timerDisplayText');
+            if (timerTextEl) {
+                const loggedMinutes = Math.floor(timerSeconds_internal / 60);
+                const currentSecondsOnly = timerSeconds_internal % 60;
+                timerTextEl.querySelector('span:first-child').textContent = `${String(loggedMinutes).padStart(2, '0')}:${String(currentSecondsOnly).padStart(2, '0')}`;
+            }
+            
+            const timerCircleEl = document.getElementById('timerProgressCircle');
+            if(timerCircleEl && activeDetailHabit) {
+                const goalInMinutes = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
+                const loggedMinutes = Math.floor(timerSeconds_internal / 60);
+                const percentage = goalInMinutes > 0 ? Math.min((loggedMinutes / goalInMinutes) * 100, 100) : 0;
+                
+                const radius = timerCircleEl.r.baseVal.value;
+                const circumference = radius * 2 * Math.PI;
+                const offset = circumference - (percentage / 100) * circumference;
+                timerCircleEl.style.strokeDashoffset = offset;
+            }
+        };
+
         // --- Data Persistence ---
         const saveHabits = () => {
             localStorage.setItem('habitsV6', JSON.stringify(habits));
             renderViewForDate(selectedDate);
-            if (activeDetailHabit) { // also update detail view if open
+            if (activeDetailHabit) {
                  activeDetailHabit = habits.find(h => h.id === activeDetailHabit.id);
-                 updateDetailViewUI();
+                 if(activeDetailHabit) {
+                    updateDetailViewUI();
+                 } else {
+                    closeDetailView();
+                 }
             }
         };
 
@@ -723,8 +895,20 @@
             if (!habit) return;
             if (!habit.history) habit.history = {};
 
-            const goal = habit.goal || 1;
-            const isCompleted = completedStatus !== null ? completedStatus : newValue >= goal;
+            let isCompleted;
+            if (completedStatus !== null) {
+                isCompleted = completedStatus;
+            } else {
+                if (habit.type === 'measurable') {
+                    isCompleted = newValue >= (habit.goal || 1);
+                } else if (habit.type === 'timed') {
+                    const goalInMinutes = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
+                    isCompleted = newValue >= (goalInMinutes || 1);
+                }
+                else {
+                    isCompleted = habit.history[dateStr]?.completed || false;
+                }
+            }
             
             habit.history[dateStr] = { value: newValue, completed: isCompleted };
             saveHabits();
@@ -733,9 +917,18 @@
         // --- Event Listeners ---
         addHabitBtn.addEventListener('click', () => openEditModal());
         cancelBtn.addEventListener('click', () => closeModal(habitModal));
-        openIconModalBtn.addEventListener('click', () => openModal(iconModal));
-        closeIconModalBtn.addEventListener('click', () => closeModal(iconModal));
         
+        // Icon Modal Listeners
+        openIconModalBtn.addEventListener('click', () => {
+            emojiInput.value = habitIconInput.value; // Sync input with current icon
+            openModal(iconModal);
+        });
+        emojiInput.addEventListener('input', updateIconSelection);
+        confirmIconBtn.addEventListener('click', () => {
+            updateIconSelection();
+            closeModal(iconModal);
+        });
+
         closeDetailViewBtn.addEventListener('click', closeDetailView);
         editHabitFromDetailBtn.addEventListener('click', () => {
              if(activeDetailHabit) {
@@ -786,13 +979,14 @@
         });
 
         deleteBtn.addEventListener('click', () => {
-            if (currentEditId && confirm('Tem certeza que deseja excluir este hábito?')) {
+            if (currentEditId) {
+                // Using a custom modal for confirm would be better, but for now this is fine.
                 habits = habits.filter(h => h.id !== currentEditId);
                 saveHabits();
                 closeModal(habitModal);
-                closeDetailView();
             }
         });
+
 
         // --- Initial Load ---
         populateIconGrid();
