@@ -21,7 +21,8 @@
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            touch-action: pan-y;
+            /* Changed touch-action to allow for both pan-y and pan-x initially */
+            touch-action: pan-x pan-y;
             background-color: var(--bg-color);
             color: #e2e8f0; /* slate-200 */
         }
@@ -134,9 +135,14 @@ input:required:invalid {
 <div id="app" class="min-h-screen flex flex-col items-center pt-8 pb-24 overflow-y-auto h-full">
     <header class="w-full max-w-md px-4 flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold tracking-wider">Habit<span class="text-purple-400">X</span></h1>
-        <button id="addHabitBtn" aria-label="Adicionar novo hábito" class="bg-purple-500 hover:bg-purple-600 text-white font-bold w-11 h-11 rounded-full text-xl flex items-center justify-center shadow-lg transition-transform transform hover:scale-110 active:scale-100">
-            <i class="fa-solid fa-plus"></i>
-        </button>
+        <div class="flex items-center gap-3">
+            <button id="returnToTodayBtn" aria-label="Voltar para hoje" class="bg-slate-700 hover:bg-slate-600 text-white font-bold w-11 h-11 rounded-full text-lg flex items-center justify-center shadow-lg transition-all transform hover:scale-110 active:scale-100 hidden">
+                <i class="fa-solid fa-arrow-rotate-left"></i>
+            </button>
+            <button id="addHabitBtn" aria-label="Adicionar novo hábito" class="bg-purple-500 hover:bg-purple-600 text-white font-bold w-11 h-11 rounded-full text-xl flex items-center justify-center shadow-lg transition-transform transform hover:scale-110 active:scale-100">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
     </header>
 
     <main id="mainView" class="w-full max-w-md flex-grow">
@@ -391,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Habit Modal
     const addHabitBtn = document.getElementById('addHabitBtn');
+    const returnToTodayBtn = document.getElementById('returnToTodayBtn');
     const habitModal = document.getElementById('habitModal');
     const habitModalContent = document.getElementById('habitModalContent');
     const habitForm = document.getElementById('habitForm');
@@ -434,6 +441,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeDetailHabit = null;
     let touchStartX = 0;
     let touchEndX = 0;
+    let touchStartY = 0;
+    let touchEndY = 0;
     // Timer State
     let timerInterval = null;
     let isTimerRunning = false;
@@ -468,21 +477,43 @@ document.addEventListener('DOMContentLoaded', () => {
             contentContainer.style.transform = `translateX(${direction === 'left' ? '-100%' : '100%'})`;
             
             setTimeout(() => {
-                contentContainer.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+                contentContainer.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease-out';
                 contentContainer.style.transform = 'translateX(0)';
                 contentContainer.style.opacity = '1';
             }, 20);
         }, 300);
     };
+
     const handleSwipe = () => {
-        if (touchEndX < touchStartX - 50) changeDate(1);
-        if (touchEndX > touchStartX + 50) changeDate(-1);
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+
+        // Only trigger swipe if horizontal movement is predominantly horizontal
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Check for minimum swipe distance
+            if (deltaX < -50) { // Swipe Left (view moves to next day)
+                changeDate(1);
+            } else if (deltaX > 50) { // Swipe Right (view moves to previous day)
+                changeDate(-1);
+            }
+        }
     };
-    mainView.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, { passive: true });
-    mainView.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); });
+    mainView.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    mainView.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+    });
 
     // --- Render Functions ---
     const renderViewForDate = (date) => {
+        const isToday = toISODateString(date) === toISODateString(new Date());
+        returnToTodayBtn.classList.toggle('hidden', isToday);
+        
         renderDateStrip(date);
         renderHabits(date);
     };
@@ -1284,6 +1315,30 @@ const updateHabitProgress = (habitId, dateStr, newValue, completedStatus = null)
 // --- Event Listeners ---
 addHabitBtn.addEventListener('click', () => openEditModal());
 cancelBtn.addEventListener('click', () => closeModal(habitModal));
+
+returnToTodayBtn.addEventListener('click', () => {
+    const newDate = new Date();
+    if (toISODateString(selectedDate) === toISODateString(newDate)) return;
+
+    // Logic copied from changeDate to ensure same animation
+    const direction = newDate > selectedDate ? 'right' : 'left';
+    contentContainer.style.transform = `translateX(${direction === 'left' ? '100%' : '-100%'})`;
+    contentContainer.style.opacity = '0';
+    
+    setTimeout(() => {
+        selectedDate = newDate;
+        renderViewForDate(selectedDate);
+        contentContainer.style.transition = 'none';
+        contentContainer.style.transform = `translateX(${direction === 'left' ? '-100%' : '100%'})`;
+        
+        setTimeout(() => {
+            // Use same improved animation
+            contentContainer.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease-out';
+            contentContainer.style.transform = 'translateX(0)';
+            contentContainer.style.opacity = '1';
+        }, 20);
+    }, 300);
+});
 
 openIconModalBtn.addEventListener('click', () => {
     emojiInput.value = habitIconInput.value; 
