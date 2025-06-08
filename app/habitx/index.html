@@ -860,7 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateStrForNotes = toISODateString(selectedDate);
         const noteDateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
         notesSectionContainer.innerHTML = `
-            <h3 class="font-bold text-lg mb-2">Notas (${noteDateText})</h3>
+            <h3 class="font-bold text-lg mb-2">Notas</h3>
             <textarea id="habitNoteTextarea" class="w-full h-24 bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Adicione suas notas aqui..."></textarea>
 `;
     
@@ -988,7 +988,7 @@ function getDetailLogHTML() {
     
     let controlsHTML = '';
 
-    const headerHTML = `<h3 class="font-bold text-lg mb-2">Progresso para <span class="text-purple-300">${dateText}</span></h3>`;
+    const headerHTML = `<h3 class="font-bold text-lg mb-2">Progresso</h3>`;
     const circleHTML = createDetailProgressCircleHTML(progress, habit); // Circle HTML generated here
 
     switch (habit.type) {
