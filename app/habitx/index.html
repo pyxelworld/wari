@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>HabitX - Rastreador de Hábitos</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#120c1f"/>
+    <link rel="apple-touch-icon" href="icon-192x192.png"> <!-- Basic PWA icon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,6 +17,7 @@
             --bg-color: #120c1f;
             --primary-color: #8b5cf6; /* purple-500 */
             --primary-color-light: #a78bfa; /* purple-400 */
+            --green-color: #4ade80; /* green-400 */
         }
         body {
             font-family: 'Inter', sans-serif;
@@ -22,994 +26,1265 @@
             background-color: var(--bg-color);
             color: #e2e8f0; /* slate-200 */
         }
+/* --- NEW UX --- App container gets blurred when a modal is open */
+    #app.modal-open {
+        transform: scale(0.98);
+        filter: blur(4px);
+        opacity: 0.7;
+    }
+    #app {
+        transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
+    }
 
-        /* --- NEW UX --- App container gets blurred when a modal is open */
-        #app.modal-open {
-            transform: scale(0.98);
-            filter: blur(4px);
-            opacity: 0.7;
-        }
-        #app {
-            transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
-        }
+    .glass-effect {
+        background: rgba(28, 19, 48, 0.5);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
 
-        .glass-effect {
-            background: rgba(28, 19, 48, 0.5);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
+    .progress-ring-circle {
+        transition: stroke-dashoffset 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
 
-        .progress-ring-circle {
-            transition: stroke-dashoffset 0.8s cubic-bezier(0.65, 0, 0.35, 1);
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
-        }
+    .modal-container {
+        transition: opacity 0.3s ease;
+    }
+    .modal-content {
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+    }
+    .modal-container.hidden {
+        pointer-events: none;
+        opacity: 0;
+    }
+    .modal-container.hidden .modal-content {
+        transform: translateY(50px) scale(0.95);
+        opacity: 0;
+    }
 
-        .modal-container {
-            transition: opacity 0.3s ease;
-        }
-        .modal-content {
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
-        }
-        .modal-container.hidden {
-            pointer-events: none;
-            opacity: 0;
-        }
-        .modal-container.hidden .modal-content {
-            transform: translateY(50px) scale(0.95);
-            opacity: 0;
-        }
+    .date-strip-item.active {
+        background-color: var(--primary-color);
+        color: white;
+        transform: scale(1.1);
+    }
+    .date-strip-item {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    /* --- IMPROVED UX --- Better hover and active states for list items */
+    .habit-item {
+        transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+    .habit-item:hover {
+         background-color: rgba(255, 255, 255, 0.07);
+         transform: translateY(-2px);
+    }
 
-        .date-strip-item.active {
-            background-color: var(--primary-color);
-            color: white;
-            transform: scale(1.1);
-        }
-        .date-strip-item {
-            transition: all 0.2s ease-in-out;
-        }
-        
-        /* --- IMPROVED UX --- Better hover and active states for list items */
-        .habit-item {
-            transition: transform 0.2s ease, background-color 0.2s ease;
-        }
-        .habit-item:hover {
-             background-color: rgba(255, 255, 255, 0.07);
-             transform: translateY(-2px);
-        }
-
-        .habit-progress-circle-bg { stroke: rgba(255, 255, 255, 0.1); }
-        .habit-progress-circle-fg {
-            stroke: var(--primary-color-light);
-            transition: stroke-dashoffset 0.4s ease;
-        }
-        .habit-progress-circle-fg.completed { stroke: #4ade80; }
-        
-        input[type="date"]::-webkit-calendar-picker-indicator,
-        input[type="time"]::-webkit-calendar-picker-indicator {
-            filter: invert(0.8);
-            cursor: pointer;
-        }
-        
-        input:required:invalid {
-            border-bottom-color: #f87171; /* red-400 */
-        }
+    .habit-progress-circle-bg { stroke: rgba(255, 255, 255, 0.1); }
+    .habit-progress-circle-fg {
+        stroke: var(--primary-color-light);
+        transition: stroke-dashoffset 0.4s ease;
+    }
+    .habit-progress-circle-fg.completed { stroke: var(--green-color); }
+    
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator {
+        filter: invert(0.8);
+        cursor: pointer;
+    }
+    
+    input:required:invalid {
+        border-bottom-color: #f87171; /* red-400 */
+    }
 
 
-        /* Calendar and new controls styling */
-        .calendar-day.completed {
-             background-color: #4ade80;
-             color: #1a202c;
-             border-radius: 50%;
-             font-weight: bold;
-        }
-        .calendar-day-header { font-size: 0.75rem; color: #94a3b8; font-weight: bold; }
+    /* Calendar and new controls styling */
+    .calendar-day.completed {
+         background-color: var(--green-color);
+         color: #1a202c;
+         border-radius: 50%;
+         font-weight: bold;
+    }
+    .calendar-day-header { font-size: 0.75rem; color: #94a3b8; font-weight: bold; }
 
-        /* --- IMPROVED UX --- Clearer button states */
-        .control-btn { transition: all 0.2s ease; }
-        .freq-btn.active, .weekday-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-        }
-        .habit-type-btn.active {
-            background-color: var(--primary-color) !important;
-            color: white;
-        }
-        .icon-btn:hover { transform: scale(1.2); }
-        
-        #startPauseTimerBtn:disabled {
-            background-color: #4ade80; /* green-500 */
-            cursor: not-allowed;
-            opacity: 0.8;
-        }
-    </style>
+    /* --- IMPROVED UX --- Clearer button states */
+    .control-btn { transition: all 0.2s ease; }
+    .freq-btn.active, .weekday-btn.active {
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+    }
+    .habit-type-btn.active {
+        background-color: var(--primary-color) !important;
+        color: white;
+    }
+    .icon-btn:hover { transform: scale(1.2); }
+    
+    #startPauseTimerBtn:disabled {
+        background-color: var(--green-color) !important; /* Ensure disabled style overrides */
+        color: white !important;
+        cursor: not-allowed;
+        opacity: 0.8;
+    }
+</style>
 </head>
 <body class="gradient-bg text-white overflow-hidden h-screen">
-
-    <div id="app" class="min-h-screen flex flex-col items-center pt-8 pb-24 overflow-y-auto h-full">
-        
-        <header class="w-full max-w-md px-4 flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold tracking-wider">Habit<span class="text-purple-400">X</span></h1>
-            <button id="addHabitBtn" aria-label="Adicionar novo hábito" class="bg-purple-500 hover:bg-purple-600 text-white font-bold w-11 h-11 rounded-full text-xl flex items-center justify-center shadow-lg transition-transform transform hover:scale-110 active:scale-100">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-        </header>
-
-        <main id="mainView" class="w-full max-w-md flex-grow">
-            <div id="date-strip-container" class="mb-6 px-4">
-                <div class="flex justify-between items-center text-center"></div>
-            </div>
-
-            <div id="content-container" class="transition-transform duration-300 ease-out">
-                <div class="px-4">
-                    <div class="flex flex-col items-center mb-8">
-                        <div class="relative w-48 h-48">
-                            <svg class="w-full h-full" viewBox="0 0 120 120">
-                                <circle class="stroke-current text-purple-900/70" cx="60" cy="60" r="54" fill="none" stroke-width="12"></circle>
-                                <circle id="overallProgressCircle" class="progress-ring-circle stroke-current text-purple-400" cx="60" cy="60" r="54" fill="none" stroke-width="12" stroke-linecap="round" style="stroke-dasharray: 339.292; stroke-dashoffset: 339.292;"></circle>
-                            </svg>
-                            <div id="overallProgressText" class="absolute inset-0 flex flex-col items-center justify-center">
-                                <span id="dayLabel" class="text-xl font-bold">Hoje</span>
-                                <span id="overallPercentage" class="text-4xl font-bold">0%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="habitListContainer"></div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Edit/Add Habit Modal -->
-    <div id="habitModal" class="modal-container fixed inset-0 bg-black bg-opacity-70 flex items-end justify-center p-4 z-50 hidden">
-        <div id="habitModalContent" class="modal-content glass-effect w-full max-w-md p-6 rounded-t-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <form id="habitForm">
-                <input type="hidden" id="habitId">
-                <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-center">Novo Hábito</h2>
-                
-                <div class="flex items-center gap-4 mb-6">
-                    <button type="button" id="openIconModalBtn" aria-label="Escolher ícone" class="text-4xl p-3 bg-slate-700/50 rounded-2xl control-btn hover:scale-110 active:scale-100">🎯</button>
-                    <input type="hidden" id="habitIcon" value="🎯">
-                    <input id="habitName" type="text" placeholder="Nome do Hábito" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white text-lg placeholder-purple-300 focus:outline-none focus:border-purple-300 transition" required>
-                </div>
-
-                <div class="space-y-6">
-                    <div>
-                        <p class="mb-2 text-purple-300 font-semibold">Repetição</p>
-                        <div class="grid grid-cols-3 gap-2">
-                            <input type="hidden" id="habitFrequency" value="daily">
-                            <button type="button" data-freq="none" class="freq-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm">Único Dia</button>
-                            <button type="button" data-freq="daily" class="freq-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm">Diário</button>
-                            <button type="button" data-freq="custom" class="freq-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm">Semanal</button>
-                        </div>
-                        <div id="customWeekdays" class="hidden mt-3 flex justify-around bg-slate-800/50 p-2 rounded-lg"></div>
-                    </div>
-                     <div>
-                        <p class="mb-2 text-purple-300 font-semibold">Tipo de Meta</p>
-                        <div class="grid grid-cols-3 gap-2">
-                            <button type="button" data-type="yes_no" class="habit-type-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm"><i class="fas fa-check-circle mr-1"></i>Sim/Não</button>
-                            <button type="button" data-type="measurable" class="habit-type-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm"><i class="fas fa-ruler-combined mr-1"></i>Medida</button>
-                            <button type="button" data-type="timed" class="habit-type-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm"><i class="fas fa-clock mr-1"></i>Tempo</button>
-                        </div>
-                        <input type="hidden" id="habitType" value="yes_no">
-                    </div>
-
-                    <div id="goalOptionsContainer" class="hidden">
-                        <div id="measurableOptions" class="hidden">
-                            <p class="mb-2 text-purple-300 font-semibold">Definir Medida</p>
-                            <div class="flex items-center space-x-4">
-                                <input id="habitGoal" type="number" placeholder="Meta" class="w-1/2 bg-transparent border-b-2 border-purple-400 p-2 text-white placeholder-purple-300 focus:outline-none">
-                                <input id="habitUnit" type="text" placeholder="Unidade (ex: copos)" class="w-1/2 bg-transparent border-b-2 border-purple-400 p-2 text-white placeholder-purple-300 focus:outline-none">
-                            </div>
-                        </div>
-                        <div id="timedOptions" class="hidden">
-                             <p class="mb-2 text-purple-300 font-semibold">Definir Tempo</p>
-                            <div class="flex items-center space-x-4">
-                                 <input id="habitTimeGoal" type="number" placeholder="Meta" class="w-1/2 bg-transparent border-b-2 border-purple-400 p-2 text-white placeholder-purple-300 focus:outline-none">
-                                <select id="habitTimeUnit" class="w-1/2 bg-purple-800 border-none p-2 rounded-lg text-white focus:outline-none">
-                                    <option value="minutes">Minutos</option>
-                                    <option value="hours">Horas</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="eventScheduleContainer">
-                        <p class="mb-2 text-purple-300 font-semibold">Horário <span class="font-light text-sm">(Opcional)</span></p>
-                        <div class="grid grid-cols-3 gap-4">
-                            <div id="eventDateField" class="col-span-1">
-                                <label for="eventDate" class="text-xs text-purple-400 flex items-center">Data <span id="dateRequiredIndicator" class="text-red-400 ml-1 hidden">*</span></label>
-                                <input type="date" id="eventDate" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white focus:outline-none transition-colors">
-                            </div>
-                            <div class="col-span-1">
-                                 <label for="startTime" class="text-xs text-purple-400">Início</label>
-                                 <input type="time" id="startTime" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white focus:outline-none">
-                            </div>
-                            <div class="col-span-1">
-                                 <label for="endTime" class="text-xs text-purple-400">Fim</label>
-                                 <input type="time" id="endTime" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white focus:outline-none">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex space-x-4 mt-8">
-                    <button type="button" id="cancelBtn" class="flex-1 bg-slate-600 hover:bg-slate-700 font-bold py-3 rounded-xl control-btn active:scale-95">Cancelar</button>
-                    <button type="submit" class="flex-1 bg-purple-500 hover:bg-purple-600 font-bold py-3 rounded-xl control-btn active:scale-95">Salvar</button>
-                </div>
-                 <button type="button" id="deleteBtn" class="w-full mt-4 bg-red-600 hover:bg-red-700 font-bold py-3 rounded-xl control-btn active:scale-95 hidden">Excluir Hábito</button>
-            </form>
-        </div>
-    </div>
+<div id="app" class="min-h-screen flex flex-col items-center pt-8 pb-24 overflow-y-auto h-full">
     
-    <!-- Icon Picker Modal -->
-    <div id="iconModal" class="modal-container fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60] hidden">
-        <div class="modal-content glass-effect w-full max-w-md p-6 rounded-2xl shadow-2xl">
-            <h2 class="text-xl font-bold mb-2 text-center">Escolha um Ícone</h2>
-            <p class="text-center text-slate-400 mb-4 text-sm">Cole seu emoji abaixo ou escolha uma sugestão.</p>
-            
-            <input type="text" id="emojiInput" maxlength="2" placeholder="✨" class="w-full text-center text-4xl bg-slate-900/70 p-2 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
-            
-            <div id="iconGrid" class="grid grid-cols-6 gap-4 max-h-48 overflow-y-auto border-t border-slate-700 pt-4"></div>
-            
-            <button id="confirmIconBtn" class="w-full mt-4 bg-purple-600 hover:bg-purple-700 font-bold py-2 rounded-xl control-btn active:scale-95">Confirmar</button>
+    <header class="w-full max-w-md px-4 flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold tracking-wider">Habit<span class="text-purple-400">X</span></h1>
+        <button id="addHabitBtn" aria-label="Adicionar novo hábito" class="bg-purple-500 hover:bg-purple-600 text-white font-bold w-11 h-11 rounded-full text-xl flex items-center justify-center shadow-lg transition-transform transform hover:scale-110 active:scale-100">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    </header>
+
+    <main id="mainView" class="w-full max-w-md flex-grow">
+        <div id="date-strip-container" class="mb-6 px-4">
+            <div class="flex justify-between items-center text-center"></div>
         </div>
+
+        <div id="content-container" class="transition-transform duration-300 ease-out">
+            <div class="px-4">
+                <div class="flex flex-col items-center mb-8">
+                    <div class="relative w-48 h-48">
+                        <svg class="w-full h-full" viewBox="0 0 120 120">
+                            <circle class="stroke-current text-purple-900/70" cx="60" cy="60" r="54" fill="none" stroke-width="12"></circle>
+                            <circle id="overallProgressCircle" class="progress-ring-circle stroke-current text-purple-400" cx="60" cy="60" r="54" fill="none" stroke-width="12" stroke-linecap="round" style="stroke-dasharray: 339.292; stroke-dashoffset: 339.292;"></circle>
+                        </svg>
+                        <div id="overallProgressText" class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="dayLabel" class="text-xl font-bold">Hoje</span>
+                            <span id="overallPercentage" class="text-4xl font-bold">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="habitListContainer"></div>
+        </div>
+    </main>
+</div>
+
+<!-- Edit/Add Habit Modal -->
+<div id="habitModal" class="modal-container fixed inset-0 bg-black bg-opacity-70 flex items-end justify-center p-4 z-50 hidden">
+    <div id="habitModalContent" class="modal-content glass-effect w-full max-w-md p-6 rounded-t-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <form id="habitForm">
+            <input type="hidden" id="habitId">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-center">Novo Hábito</h2>
+            
+            <div class="flex items-center gap-4 mb-6">
+                <button type="button" id="openIconModalBtn" aria-label="Escolher ícone" class="text-4xl p-3 bg-slate-700/50 rounded-2xl control-btn hover:scale-110 active:scale-100">🎯</button>
+                <input type="hidden" id="habitIcon" value="🎯">
+                <input id="habitName" type="text" placeholder="Nome do Hábito" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white text-lg placeholder-purple-300 focus:outline-none focus:border-purple-300 transition" required>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <p class="mb-2 text-purple-300 font-semibold">Repetição</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="hidden" id="habitFrequency" value="daily">
+                        <button type="button" data-freq="none" class="freq-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm">Único Dia</button>
+                        <button type="button" data-freq="daily" class="freq-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm">Diário</button>
+                        <button type="button" data-freq="custom" class="freq-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm">Semanal</button>
+                    </div>
+                    <div id="customWeekdays" class="hidden mt-3 flex justify-around bg-slate-800/50 p-2 rounded-lg"></div>
+                </div>
+                 <div>
+                    <p class="mb-2 text-purple-300 font-semibold">Tipo de Meta</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" data-type="yes_no" class="habit-type-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm"><i class="fas fa-check-circle mr-1"></i>Sim/Não</button>
+                        <button type="button" data-type="measurable" class="habit-type-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm"><i class="fas fa-ruler-combined mr-1"></i>Medida</button>
+                        <button type="button" data-type="timed" class="habit-type-btn control-btn flex-1 bg-purple-900/70 p-3 rounded-lg text-sm"><i class="fas fa-clock mr-1"></i>Tempo</button>
+                    </div>
+                    <input type="hidden" id="habitType" value="yes_no">
+                </div>
+
+                <div id="goalOptionsContainer" class="hidden">
+                    <div id="measurableOptions" class="hidden">
+                        <p class="mb-2 text-purple-300 font-semibold">Definir Medida</p>
+                        <div class="flex items-center space-x-4">
+                            <input id="habitGoal" type="number" placeholder="Meta" class="w-1/2 bg-transparent border-b-2 border-purple-400 p-2 text-white placeholder-purple-300 focus:outline-none">
+                            <input id="habitUnit" type="text" placeholder="Unidade (ex: copos)" class="w-1/2 bg-transparent border-b-2 border-purple-400 p-2 text-white placeholder-purple-300 focus:outline-none">
+                        </div>
+                    </div>
+                    <div id="timedOptions" class="hidden">
+                         <p class="mb-2 text-purple-300 font-semibold">Definir Tempo</p>
+                        <div class="flex items-center space-x-4">
+                             <input id="habitTimeGoal" type="number" placeholder="Meta" class="w-1/2 bg-transparent border-b-2 border-purple-400 p-2 text-white placeholder-purple-300 focus:outline-none">
+                            <select id="habitTimeUnit" class="w-1/2 bg-purple-800 border-none p-2 rounded-lg text-white focus:outline-none">
+                                <option value="minutes">Minutos</option>
+                                <option value="hours">Horas</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="eventScheduleContainer">
+                    <p class="mb-2 text-purple-300 font-semibold">Horário <span id="scheduleOptionalText" class="font-light text-sm">(Opcional)</span></p>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div id="eventDateFieldWrapper" class="col-span-1">
+                            <label for="eventDate" class="text-xs text-purple-400 flex items-center">Data <span id="dateRequiredIndicator" class="text-red-400 ml-1 hidden">*</span></label>
+                            <input type="date" id="eventDate" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white focus:outline-none transition-colors">
+                        </div>
+                        <div class="col-span-1">
+                             <label for="startTime" class="text-xs text-purple-400">Início</label>
+                             <input type="time" id="startTime" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white focus:outline-none">
+                        </div>
+                        <div class="col-span-1">
+                             <label for="endTime" class="text-xs text-purple-400">Fim</label>
+                             <input type="time" id="endTime" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex space-x-4 mt-8">
+                <button type="button" id="cancelBtn" class="flex-1 bg-slate-600 hover:bg-slate-700 font-bold py-3 rounded-xl control-btn active:scale-95">Cancelar</button>
+                <button type="submit" class="flex-1 bg-purple-500 hover:bg-purple-600 font-bold py-3 rounded-xl control-btn active:scale-95">Salvar</button>
+            </div>
+             <button type="button" id="deleteBtn" class="w-full mt-4 bg-red-600 hover:bg-red-700 font-bold py-3 rounded-xl control-btn active:scale-95 hidden">Excluir Hábito</button>
+        </form>
     </div>
+</div>
 
-    <!-- Habit Detail View -->
-    <div id="habitDetailView" class="fixed inset-0 bg-[#120c1f] z-[60] transition-transform duration-500 ease-in-out p-4 pt-8 flex flex-col" style="transform: translateX(100%);">
-        <div class="flex items-center mb-6 px-2">
-            <button id="closeDetailViewBtn" aria-label="Voltar" class="text-2xl p-2 mr-2 text-slate-300 hover:text-white control-btn"><i class="fas fa-arrow-left"></i></button>
-            <div id="detailIcon" class="text-3xl mr-4"></div>
-            <h2 id="detailHabitName" class="text-2xl font-bold flex-1 truncate"></h2>
-            <button id="editHabitFromDetailBtn" aria-label="Editar hábito" class="text-xl p-2 text-slate-300 hover:text-white control-btn"><i class="fas fa-ellipsis-v"></i></button>
-        </div>
-
-        <div class="flex-grow overflow-y-auto pb-8">
-            <div id="detailLogTodayContainer" class="glass-effect p-6 rounded-2xl mb-6 mx-2"></div>
-            <div id="calendarContainer" class="glass-effect p-6 rounded-2xl mb-6 mx-2"></div>
-            <div id="statsContainer" class="glass-effect p-6 rounded-2xl mx-2"></div>
-        </div>
+<!-- Icon Picker Modal -->
+<div id="iconModal" class="modal-container fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60] hidden">
+    <div class="modal-content glass-effect w-full max-w-md p-6 rounded-2xl shadow-2xl">
+        <h2 class="text-xl font-bold mb-2 text-center">Escolha um Ícone</h2>
+        <p class="text-center text-slate-400 mb-4 text-sm">Cole seu emoji abaixo ou escolha uma sugestão.</p>
+        
+        <input type="text" id="emojiInput" maxlength="2" placeholder="✨" class="w-full text-center text-4xl bg-slate-900/70 p-2 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
+        
+        <div id="iconGrid" class="grid grid-cols-6 gap-4 max-h-48 overflow-y-auto border-t border-slate-700 pt-4"></div>
+        
+        <button id="confirmIconBtn" class="w-full mt-4 bg-purple-600 hover:bg-purple-700 font-bold py-2 rounded-xl control-btn active:scale-95">Confirmar</button>
     </div>
+</div>
+
+<!-- Habit Detail View -->
+<div id="habitDetailView" class="fixed inset-0 bg-[#120c1f] z-[60] transition-transform duration-500 ease-in-out p-4 pt-8 flex flex-col" style="transform: translateX(100%);">
+    <header class="flex items-center mb-6 px-2">
+        <button id="closeDetailViewBtn" aria-label="Voltar" class="text-2xl p-2 mr-2 text-slate-300 hover:text-white control-btn"><i class="fas fa-arrow-left"></i></button>
+        <div id="detailIcon" class="text-3xl mr-4"></div>
+        <h2 id="detailHabitName" class="text-2xl font-bold flex-1 truncate"></h2>
+        <button id="editHabitFromDetailBtn" aria-label="Editar hábito" class="text-xl p-2 text-slate-300 hover:text-white control-btn"><i class="fas fa-ellipsis-v"></i></button>
+    </header>
+
+    <div class="flex-grow overflow-y-auto pb-8">
+        <div id="detailLogTodayContainer" class="glass-effect p-6 rounded-2xl mb-6 mx-2"></div>
+        <div id="calendarContainer" class="glass-effect p-6 rounded-2xl mb-6 mx-2"></div>
+        <div id="statsContainer" class="glass-effect p-6 rounded-2xl mx-2"></div>
+        <!-- Notes container will be appended here by JS -->
+    </div>
+</div>
 
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- Elements ---
-        const appContainer = document.getElementById('app');
-        const mainView = document.getElementById('mainView');
-        const contentContainer = document.getElementById('content-container');
-        const dateStripContainer = document.getElementById('date-strip-container').firstElementChild;
-        const overallProgressCircle = document.getElementById('overallProgressCircle');
-        const overallPercentage = document.getElementById('overallPercentage');
-        const dayLabel = document.getElementById('dayLabel');
-        const habitListContainer = document.getElementById('habitListContainer');
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Service Worker Registration ---
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(registration => {
+                console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+                console.error('Service Worker registration failed:', error);
+            });
+    }
 
-        // Habit Modal
-        const addHabitBtn = document.getElementById('addHabitBtn');
-        const habitModal = document.getElementById('habitModal');
-        const habitModalContent = document.getElementById('habitModalContent');
-        const habitForm = document.getElementById('habitForm');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const deleteBtn = document.getElementById('deleteBtn');
-        const habitTypeButtons = document.querySelectorAll('.habit-type-btn');
-        const goalOptionsContainer = document.getElementById('goalOptionsContainer');
-        const measurableOptions = document.getElementById('measurableOptions');
-        const timedOptions = document.getElementById('timedOptions');
-        const openIconModalBtn = document.getElementById('openIconModalBtn');
-        const habitIconInput = document.getElementById('habitIcon');
-        const freqButtons = document.querySelectorAll('.freq-btn');
-        const customWeekdaysContainer = document.getElementById('customWeekdays');
-        const eventDateField = document.getElementById('eventDateField');
-        const eventDateInput = document.getElementById('eventDate');
-        const dateRequiredIndicator = document.getElementById('dateRequiredIndicator');
+    // --- Elements ---
+    const appContainer = document.getElementById('app');
+    const mainView = document.getElementById('mainView');
+    const contentContainer = document.getElementById('content-container');
+    const dateStripContainer = document.getElementById('date-strip-container').firstElementChild;
+    const overallProgressCircle = document.getElementById('overallProgressCircle');
+    const overallPercentage = document.getElementById('overallPercentage');
+    const dayLabel = document.getElementById('dayLabel');
+    const habitListContainer = document.getElementById('habitListContainer');
 
-        // Icon Modal
-        const iconModal = document.getElementById('iconModal');
-        const iconGrid = document.getElementById('iconGrid');
-        const confirmIconBtn = document.getElementById('confirmIconBtn');
-        const emojiInput = document.getElementById('emojiInput');
+    // Habit Modal
+    const addHabitBtn = document.getElementById('addHabitBtn');
+    const habitModal = document.getElementById('habitModal');
+    const habitModalContent = document.getElementById('habitModalContent');
+    const habitForm = document.getElementById('habitForm');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const habitTypeButtons = document.querySelectorAll('.habit-type-btn');
+    const goalOptionsContainer = document.getElementById('goalOptionsContainer');
+    const measurableOptions = document.getElementById('measurableOptions');
+    const timedOptions = document.getElementById('timedOptions');
+    const openIconModalBtn = document.getElementById('openIconModalBtn');
+    const habitIconInput = document.getElementById('habitIcon');
+    const freqButtons = document.querySelectorAll('.freq-btn');
+    const customWeekdaysContainer = document.getElementById('customWeekdays');
+    const eventDateInput = document.getElementById('eventDate');
+    const dateRequiredIndicator = document.getElementById('dateRequiredIndicator');
+    const scheduleOptionalText = document.getElementById('scheduleOptionalText');
+    const eventDateFieldWrapper = document.getElementById('eventDateFieldWrapper');
+
+
+    // Icon Modal
+    const iconModal = document.getElementById('iconModal');
+    const iconGrid = document.getElementById('iconGrid');
+    const confirmIconBtn = document.getElementById('confirmIconBtn');
+    const emojiInput = document.getElementById('emojiInput');
+    
+    // Detail View
+    const habitDetailView = document.getElementById('habitDetailView');
+    const closeDetailViewBtn = document.getElementById('closeDetailViewBtn');
+    const editHabitFromDetailBtn = document.getElementById('editHabitFromDetailBtn');
+    const detailIcon = document.getElementById('detailIcon');
+    const detailHabitName = document.getElementById('detailHabitName');
+    const detailLogTodayContainer = document.getElementById('detailLogTodayContainer');
+    const calendarContainer = document.getElementById('calendarContainer');
+    const statsContainer = document.getElementById('statsContainer');
+
+    
+    // --- State ---
+    let habits = JSON.parse(localStorage.getItem('habitsV6')) || [];
+    let selectedDate = new Date();
+    let currentEditId = null;
+    let activeDetailHabit = null;
+    let touchStartX = 0;
+    let touchEndX = 0;
+    // Timer State
+    let timerInterval = null;
+    let isTimerRunning = false;
+    
+    // --- Constants ---
+    const ICONS = ['🎯', '📚', '💧', '🧘', '🏃', '🏋️', '🥦', '😴', '✍️', '📅', '🎨', '🎵', '🧹', '💰', '🧑‍💻', '🎮', '❤️', '🗣️', '🚶', '🌱', '☀️', '⭐', '💡', '🔑'];
+    const WEEKDAYS_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+    // --- Utils ---
+    const toISODateString = (date) => {
+        const d = new Date(date);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().split('T')[0];
+    }
+
+    const formatTime = (totalSeconds) => {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    };
+    
+    // --- Date & Swipe Logic ---
+    const changeDate = (days) => {
+        selectedDate.setDate(selectedDate.getDate() + days);
+        const direction = days > 0 ? 'right' : 'left';
+        contentContainer.style.transform = `translateX(${direction === 'left' ? '100%' : '-100%'})`;
+        contentContainer.style.opacity = '0';
         
-        // Detail View
-        const habitDetailView = document.getElementById('habitDetailView');
-        const closeDetailViewBtn = document.getElementById('closeDetailViewBtn');
-        const editHabitFromDetailBtn = document.getElementById('editHabitFromDetailBtn');
-        const detailIcon = document.getElementById('detailIcon');
-        const detailHabitName = document.getElementById('detailHabitName');
-        
-        // --- State ---
-        let habits = JSON.parse(localStorage.getItem('habitsV6')) || [];
-        let selectedDate = new Date();
-        let currentEditId = null;
-        let activeDetailHabit = null;
-        let touchStartX = 0;
-        let touchEndX = 0;
-        // Timer State
-        let timerInterval = null;
-        let isTimerRunning = false;
-        let timerSeconds_internal = 0; // Tracks live timer seconds
-        
-        // --- Constants ---
-        const ICONS = ['🎯', '📚', '💧', '🧘', '🏃', '🏋️', '🥦', '😴', '✍️', '📅', '🎨', '🎵', '🧹', '💰', '🧑‍💻', '🎮', '❤️', '🗣️', '🚶', '🌱', '☀️', '⭐', '💡', '🔑'];
-        const WEEKDAYS_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-
-        // --- Utils ---
-        const toISODateString = (date) => {
-            const d = new Date(date);
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-            return d.toISOString().split('T')[0];
-        }
-
-        const formatTime = (totalSeconds) => {
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = totalSeconds % 60;
-            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        };
-        
-        // --- Date & Swipe Logic ---
-        const changeDate = (days) => {
-            selectedDate.setDate(selectedDate.getDate() + days);
-            const direction = days > 0 ? 'right' : 'left';
-            contentContainer.style.transform = `translateX(${direction === 'left' ? '100%' : '-100%'})`;
-            contentContainer.style.opacity = '0';
+        setTimeout(() => {
+            renderViewForDate(selectedDate);
+            contentContainer.style.transition = 'none';
+            contentContainer.style.transform = `translateX(${direction === 'left' ? '-100%' : '100%'})`;
             
             setTimeout(() => {
-                renderViewForDate(selectedDate);
-                contentContainer.style.transition = 'none';
-                contentContainer.style.transform = `translateX(${direction === 'left' ? '-100%' : '100%'})`;
-                
-                setTimeout(() => {
-                    contentContainer.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-                    contentContainer.style.transform = 'translateX(0)';
-                    contentContainer.style.opacity = '1';
-                }, 20);
-            }, 300);
-        };
-        const handleSwipe = () => {
-            if (touchEndX < touchStartX - 50) changeDate(1);
-            if (touchEndX > touchStartX + 50) changeDate(-1);
-        };
-        mainView.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, { passive: true });
-        mainView.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); });
+                contentContainer.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+                contentContainer.style.transform = 'translateX(0)';
+                contentContainer.style.opacity = '1';
+            }, 20);
+        }, 300);
+    };
+    const handleSwipe = () => {
+        if (touchEndX < touchStartX - 50) changeDate(1);
+        if (touchEndX > touchStartX + 50) changeDate(-1);
+    };
+    mainView.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, { passive: true });
+    mainView.addEventListener('touchend', e => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); });
 
-        // --- Render Functions ---
-        const renderViewForDate = (date) => {
-            renderDateStrip(date);
-            renderHabits(date);
-        };
+    // --- Render Functions ---
+    const renderViewForDate = (date) => {
+        renderDateStrip(date);
+        renderHabits(date);
+    };
 
-        const renderDateStrip = (centerDate) => {
-            dateStripContainer.innerHTML = '';
-            for (let i = -3; i <= 3; i++) {
-                const date = new Date(centerDate);
-                date.setDate(date.getDate() + i);
-                const day = date.toLocaleDateString('pt-BR', { weekday: 'short' }).slice(0, 3);
-                const dateNum = date.getDate();
-                const item = document.createElement('div');
-                item.className = 'date-strip-item flex flex-col items-center p-2 rounded-lg w-12 cursor-pointer';
-                if (i === 0) item.classList.add('active');
-                item.innerHTML = `<span class="text-sm font-semibold">${day}</span><span class="text-lg font-bold">${dateNum}</span>`;
-                item.onclick = () => { if (i !== 0) changeDate(i); };
-                dateStripContainer.appendChild(item);
+    const renderDateStrip = (centerDate) => {
+        dateStripContainer.innerHTML = '';
+        for (let i = -3; i <= 3; i++) {
+            const date = new Date(centerDate);
+            date.setDate(date.getDate() + i);
+            const day = date.toLocaleDateString('pt-BR', { weekday: 'short' }).slice(0, 3);
+            const dateNum = date.getDate();
+            const item = document.createElement('div');
+            item.className = 'date-strip-item flex flex-col items-center p-2 rounded-lg w-12 cursor-pointer';
+            if (i === 0) item.classList.add('active');
+            item.innerHTML = `<span class="text-sm font-semibold">${day}</span><span class="text-lg font-bold">${dateNum}</span>`;
+            item.onclick = () => { if (i !== 0) changeDate(i); };
+            dateStripContainer.appendChild(item);
+        }
+    };
+
+    const isHabitActiveOnDate = (habit, date) => {
+        const freq = habit.frequency || 'daily';
+        const dateStr = toISODateString(date);
+        
+        if (freq === 'none') {
+            return habit.date === dateStr;
+        }
+        
+        if (habit.startDate && dateStr < habit.startDate) {
+            return false;
+        }
+        
+        switch (freq) {
+            case 'daily':
+                return true;
+            case 'custom':
+                return habit.weekdays.includes(date.getDay());
+            default:
+                return true; 
+        }
+    };
+
+    const renderHabits = (date) => {
+        const dateStr = toISODateString(date);
+        const allActiveHabitsForDay = habits.filter(h => isHabitActiveOnDate(h, date));
+
+        habitListContainer.innerHTML = ''; 
+
+        if (allActiveHabitsForDay.length === 0) {
+            habitListContainer.innerHTML = `<div class="text-center text-purple-300 py-10 glass-effect rounded-2xl mx-4"><p class="text-lg">Sem hábitos para hoje.</p><p class="text-sm mt-2">Adicione um novo no botão '+' acima!</p></div>`;
+            updateOverallProgress(allActiveHabitsForDay, date);
+            return;
+        }
+
+        const happeningNowHabits = [];
+        const pendingScheduledHabits = [];
+        const pendingDailyHabits = [];
+        const completedHabitsToday = [];
+
+        const isToday = toISODateString(date) === toISODateString(new Date());
+        const currentTime = new Date();
+
+        allActiveHabitsForDay.forEach(habit => {
+            const progress = getHabitProgress(habit, dateStr);
+            if (progress.completed) {
+                completedHabitsToday.push(habit);
+                return; 
             }
-        };
 
-        const isHabitActiveOnDate = (habit, date) => {
-            const freq = habit.frequency || 'daily';
-            
-            if (freq === 'none') {
-                return habit.date === toISODateString(date);
-            }
-            
-            if (habit.startDate && toISODateString(date) < habit.startDate) {
-                return false;
-            }
-            
-            switch (freq) {
-                case 'daily':
-                    return true;
-                case 'custom':
-                    return habit.weekdays.includes(date.getDay());
-                default:
-                    return true; // Default to daily if something is wrong
-            }
-        };
+            if (isToday && habit.startTime) {
+                const [startHour, startMinute] = habit.startTime.split(':').map(Number);
+                const habitStartTime = new Date(date); // Use a copy of the target date
+                habitStartTime.setHours(startHour, startMinute, 0, 0);
 
-        const renderHabits = (date) => {
-            const dateStr = toISODateString(date);
-            const activeHabits = habits.filter(h => isHabitActiveOnDate(h, date));
-            const scheduledEvents = activeHabits.filter(h => h.startTime).sort((a, b) => (a.startTime).localeCompare(b.startTime));
-            const dailyHabits = activeHabits.filter(h => !h.startTime);
-
-            habitListContainer.innerHTML = '';
-            
-            if (scheduledEvents.length > 0) habitListContainer.innerHTML += createHabitSection('Eventos de Hoje', scheduledEvents, dateStr);
-            if (dailyHabits.length > 0) habitListContainer.innerHTML += createHabitSection('Hábitos Diários', dailyHabits, dateStr);
-
-            if (activeHabits.length === 0) {
-                habitListContainer.innerHTML = `<div class="text-center text-purple-300 py-10 glass-effect rounded-2xl mx-4"><p class="text-lg">Sem hábitos para hoje.</p><p class="text-sm mt-2">Adicione um novo no botão '+' acima!</p></div>`;
-            }
-
-            document.querySelectorAll('.habit-item').forEach(el => {
-                const habit = habits.find(h => h.id == el.dataset.id);
-                if (habit) el.addEventListener('click', () => openDetailView(habit));
-            });
-
-            updateOverallProgress(activeHabits, date);
-        };
-
-        const createHabitSection = (title, habitArray, dateStr) => {
-            const habitHTML = habitArray.map(habit => {
-                const progress = getHabitProgress(habit, dateStr);
-                const isCompleted = progress.percentage >= 100;
-                const radius = 20;
-                const circumference = 2 * Math.PI * radius;
-                const offset = circumference - (progress.percentage / 100) * circumference;
-                
-                let timeInfo = '';
-                if(habit.startTime){
-                    const timeText = habit.endTime ? `${habit.startTime} - ${habit.endTime}` : habit.startTime;
-                    timeInfo = `<span class="ml-2 text-xs bg-purple-900/50 px-2 py-1 rounded-md">${timeText}</span>`;
+                let habitEndTime = null;
+                if (habit.endTime) {
+                    const [endHour, endMinute] = habit.endTime.split(':').map(Number);
+                    habitEndTime = new Date(date); // Use a copy of the target date
+                    habitEndTime.setHours(endHour, endMinute, 0, 0);
+                     if (habitEndTime <= habitStartTime) { // Handles overnight events, assumes end time is next day
+                        habitEndTime.setDate(habitEndTime.getDate() + 1);
+                    }
                 }
 
-                return `
-                    <div class="habit-item glass-effect p-4 rounded-2xl flex items-center justify-between cursor-pointer" data-id="${habit.id}">
-                        <div class="flex items-center flex-1 min-w-0">
-                            <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center text-xl mr-4">${habit.icon || '🎯'}</div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-semibold text-white truncate">${habit.name}</p>
-                                <p class="text-sm text-purple-300 flex items-center">${progress.text} ${timeInfo}</p>
-                            </div>
-                        </div>
-                        <div class="w-12 h-12 relative flex-shrink-0 flex items-center justify-center ml-2">
-                            <svg class="w-full h-full" viewBox="0 0 44 44">
-                                <circle class="habit-progress-circle-bg" cx="22" cy="22" r="${radius}" fill="none" stroke-width="4"></circle>
-                                <circle class="habit-progress-circle-fg ${isCompleted ? 'completed' : ''}" cx="22" cy="22" r="${radius}" fill="none" stroke-width="4" stroke-linecap="round" style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};"></circle>
-                            </svg>
-                            <div class="absolute text-white text-lg">${isCompleted ? '<i class="fas fa-check"></i>' : ''}</div>
-                        </div>
-                    </div>`;
-            }).join('');
-            
-            return `<div class="px-4 mb-6"><h3 class="text-lg font-semibold text-purple-300 mb-3">${title}</h3><div class="space-y-3">${habitHTML}</div></div>`;
-        };
-        
-        const getHabitProgress = (habit, dateStr) => {
-            const historyEntry = habit.history?.[dateStr] || { value: 0, completed: false };
-            let percentage = 0;
-            let text = 'Pendente';
-            
-            switch (habit.type) {
-                case 'yes_no':
-                    percentage = historyEntry.completed ? 100 : 0;
-                    text = historyEntry.completed ? 'Concluído!' : 'Pendente';
-                    break;
-                case 'measurable':
-                    const goal = habit.goal || 1;
-                    percentage = Math.min((historyEntry.value / goal) * 100, 100);
-                    text = `${historyEntry.value} / ${goal} ${habit.unit || ''}`;
-                    if (percentage >= 100) text = `🎉 Concluído!`;
-                    break;
-                case 'timed':
-                    const timeGoal = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
-                    percentage = timeGoal > 0 ? Math.min((historyEntry.value / timeGoal) * 100, 100) : 0;
-                    text = `${historyEntry.value || 0} / ${timeGoal} min`;
-                    if (percentage >= 100) text = `🎉 Concluído!`;
-                    break;
+                if (habitEndTime) {
+                    if (currentTime >= habitStartTime && currentTime <= habitEndTime) {
+                        happeningNowHabits.push(habit);
+                        return;
+                    }
+                } else { 
+                    if (currentTime >= habitStartTime) {
+                         // For events without an end time, consider them "happening" if started
+                         // and not too long ago (e.g. within X hours, or until midnight)
+                         // For simplicity now, if it started today and has no end time, it's "happening now" if current time is past start.
+                        happeningNowHabits.push(habit);
+                        return;
+                    }
+                }
             }
-            return { percentage, value: historyEntry.value || 0, text, completed: historyEntry.completed || percentage >= 100 };
-        };
 
-        const updateOverallProgress = (habitsForDay, date) => {
-            const today = new Date();
-            if (date.toDateString() === today.toDateString()) { dayLabel.textContent = 'Hoje'; } 
-            else if (date.toDateString() === new Date(new Date().setDate(today.getDate() - 1)).toDateString()) { dayLabel.textContent = 'Ontem'; } 
-            else { dayLabel.textContent = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }); }
-            
-            if (habitsForDay.length === 0) { setOverallProgress(0); return; }
-            const totalProgressSum = habitsForDay.reduce((sum, habit) => sum + getHabitProgress(habit, toISODateString(date)).percentage, 0);
-            const avgProgress = totalProgressSum / habitsForDay.length;
-            setOverallProgress(avgProgress);
-        };
+            if (habit.startTime) {
+                pendingScheduledHabits.push(habit);
+            } else {
+                pendingDailyHabits.push(habit);
+            }
+        });
 
-        function setOverallProgress(percent) {
-            const radius = overallProgressCircle.r.baseVal.value;
-            const circumference = radius * 2 * Math.PI;
-            const clampedPercent = Math.max(0, Math.min(100, percent));
-            const offset = circumference - (clampedPercent / 100) * circumference;
-            overallProgressCircle.style.strokeDashoffset = offset;
-            overallPercentage.textContent = `${Math.round(clampedPercent)}%`;
+        pendingScheduledHabits.sort((a, b) => (a.startTime).localeCompare(b.startTime));
+        completedHabitsToday.sort((a,b) => a.name.localeCompare(b.name)); // Or by completion time if tracked
+
+        let contentRendered = false;
+        if (happeningNowHabits.length > 0) {
+            habitListContainer.innerHTML += createHabitSection('Acontecendo Agora', happeningNowHabits, dateStr);
+            contentRendered = true;
+        }
+        if (pendingScheduledHabits.length > 0) {
+            habitListContainer.innerHTML += createHabitSection('Próximos Eventos', pendingScheduledHabits, dateStr);
+            contentRendered = true;
+        }
+        if (pendingDailyHabits.length > 0) {
+            habitListContainer.innerHTML += createHabitSection('Hábitos Diários', pendingDailyHabits, dateStr);
+            contentRendered = true;
+        }
+        if (completedHabitsToday.length > 0) {
+            habitListContainer.innerHTML += createHabitSection('Concluídos', completedHabitsToday, dateStr);
+            contentRendered = true;
+        }
+        
+        if (!contentRendered && allActiveHabitsForDay.length > 0) {
+             habitListContainer.innerHTML = `<div class="text-center text-purple-300 py-10 glass-effect rounded-2xl mx-4"><p class="text-lg">Todos os hábitos de hoje estão concluídos ou já passaram!</p></div>`;
         }
 
-        // --- Modal Logic ---
-        const openModal = (modal) => {
-            modal.classList.remove('hidden');
-            appContainer.classList.add('modal-open');
-        };
-        const closeModal = (modal) => {
-            modal.classList.add('hidden');
-            const anyModalOpen = document.querySelector('.modal-container:not(.hidden)');
-            if (!anyModalOpen) {
-                appContainer.classList.remove('modal-open');
-            }
-        };
-        
-        // --- Edit/Add Modal ---
-        const openEditModal = (habit = null) => {
-            habitForm.reset();
-            currentEditId = habit?.id || null;
-            document.getElementById('modalTitle').textContent = habit ? 'Editar Hábito' : 'Novo Hábito';
-            deleteBtn.classList.toggle('hidden', !habit);
 
-            const initialData = {
-                icon: '🎯', name: '', frequency: 'daily', weekdays: [], type: 'yes_no',
-                goal: 1, unit: 'vezes', timeGoal: 60, timeUnit: 'minutes',
-                date: '', startTime: '', endTime: '',
-                ...(habit || {})
-            };
+        document.querySelectorAll('.habit-item').forEach(el => {
+            const habit = habits.find(h => h.id == el.dataset.id);
+            if (habit) el.addEventListener('click', () => openDetailView(habit));
+        });
+
+        updateOverallProgress(allActiveHabitsForDay, date);
+    };
+
+    const createHabitSection = (title, habitArray, dateStr) => {
+        const habitHTML = habitArray.map(habit => {
+            const progress = getHabitProgress(habit, dateStr);
+            const isCompleted = progress.percentage >= 100;
+            const radius = 20;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (progress.percentage / 100) * circumference;
             
-            document.getElementById('habitName').value = initialData.name;
-            habitIconInput.value = initialData.icon;
-            openIconModalBtn.textContent = initialData.icon;
-            selectHabitType(initialData.type);
-            document.getElementById('habitGoal').value = initialData.goal;
-            document.getElementById('habitUnit').value = initialData.unit;
-            document.getElementById('habitTimeGoal').value = initialData.timeGoal;
-            document.getElementById('habitTimeUnit').value = initialData.timeUnit;
-            selectFrequency(initialData.frequency, initialData.weekdays);
-            document.getElementById('eventDate').value = initialData.date;
-            document.getElementById('startTime').value = initialData.startTime;
-            document.getElementById('endTime').value = initialData.endTime;
-
-            openModal(habitModal);
-        };
-        
-        // --- Icon Modal ---
-        const populateIconGrid = () => {
-            iconGrid.innerHTML = ICONS.map(icon => 
-                `<button type="button" aria-label="${icon}" class="icon-btn text-3xl p-2 rounded-lg hover:bg-purple-700 control-btn">${icon}</button>`
-            ).join('');
-            iconGrid.querySelectorAll('.icon-btn').forEach(btn => btn.onclick = () => selectIcon(btn.textContent));
-        };
-        
-        const selectIcon = (icon) => {
-            emojiInput.value = icon;
-            updateIconSelection();
-        };
-
-        const updateIconSelection = () => {
-            const emoji = emojiInput.value;
-            // Simple validation to allow most single characters/emojis
-            if(emoji) {
-                habitIconInput.value = emoji;
-                openIconModalBtn.textContent = emoji;
-            }
-        };
-        
-        // --- Frequency Logic ---
-        const populateWeekdays = () => {
-            customWeekdaysContainer.innerHTML = WEEKDAYS_SHORT.map((day, index) => 
-                `<button type="button" data-day="${index}" class="weekday-btn control-btn w-9 h-9 flex items-center justify-center rounded-full bg-slate-900/70">${day}</button>`
-            ).join('');
-            customWeekdaysContainer.querySelectorAll('.weekday-btn').forEach(btn => btn.onclick = () => toggleWeekday(parseInt(btn.dataset.day)));
-        };
-
-        const selectFrequency = (freq, weekdays = []) => {
-            document.getElementById('habitFrequency').value = freq;
-            freqButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.freq === freq));
-            
-            const isSingleDay = freq === 'none';
-            customWeekdaysContainer.classList.toggle('hidden', freq !== 'custom');
-            eventDateField.classList.toggle('hidden', !isSingleDay);
-            
-            // Handle required attribute for single day event date
-            eventDateInput.required = isSingleDay;
-            dateRequiredIndicator.classList.toggle('hidden', !isSingleDay);
-
-            if (freq === 'custom') {
-                const weekdayBtns = customWeekdaysContainer.querySelectorAll('.weekday-btn');
-                weekdayBtns.forEach((btn, index) => {
-                    const isActive = weekdays.includes(index);
-                    btn.classList.toggle('active', isActive);
-                    btn.dataset.selected = isActive;
-                });
-            }
-        };
-        const toggleWeekday = (index) => {
-            const btn = customWeekdaysContainer.querySelector(`[data-day='${index}']`);
-            const isSelected = btn.dataset.selected === 'true';
-            btn.dataset.selected = !isSelected;
-            btn.classList.toggle('active', !isSelected);
-        };
-
-        const selectHabitType = (type) => {
-            document.getElementById('habitType').value = type;
-            goalOptionsContainer.classList.toggle('hidden', type === 'yes_no');
-            measurableOptions.classList.toggle('hidden', type !== 'measurable');
-            timedOptions.classList.toggle('hidden', type !== 'timed');
-            habitTypeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.type === type));
-        };
-        
-        // --- Detail View Logic ---
-        const openDetailView = (habit) => {
-            activeDetailHabit = habit;
-            updateDetailViewUI();
-            habitDetailView.style.transform = 'translateX(0)';
-            appContainer.classList.add('modal-open');
-        };
-
-        const closeDetailView = () => {
-            if (isTimerRunning) {
-                pauseTimer();
-            }
-            habitDetailView.style.transform = 'translateX(100%)';
-            appContainer.classList.remove('modal-open');
-            activeDetailHabit = null;
-        };
-
-        const updateDetailViewUI = () => {
-            if (!activeDetailHabit) return;
-            const { id, name, icon } = activeDetailHabit;
-            const dateStr = toISODateString(selectedDate);
-            const progress = getHabitProgress(activeDetailHabit, dateStr);
-
-            detailIcon.textContent = icon || '🎯';
-            detailHabitName.textContent = name;
-            
-            document.getElementById('detailLogTodayContainer').innerHTML = getDetailLogHTML(progress);
-            document.getElementById('calendarContainer').innerHTML = getDetailCalendarHTML(activeDetailHabit);
-            document.getElementById('statsContainer').innerHTML = getDetailStatsHTML(activeDetailHabit);
-            
-            // Clear any existing timer interval
-            if (timerInterval) clearInterval(timerInterval);
-            isTimerRunning = false;
-
-            // Re-attach listeners for dynamically created content
-            const detailToggleBtn = document.getElementById('detailToggleBtn');
-            if (detailToggleBtn) detailToggleBtn.onclick = () => {
-                const currentProgress = getHabitProgress(activeDetailHabit, dateStr);
-                updateHabitProgress(id, dateStr, 0, !currentProgress.completed);
-                updateDetailViewUI();
-            };
-            const detailPlusBtn = document.getElementById('detailPlusBtn');
-            if(detailPlusBtn) detailPlusBtn.onclick = () => handleDetailInteractionUpdate(1);
-            const detailMinusBtn = document.getElementById('detailMinusBtn');
-            if(detailMinusBtn) detailMinusBtn.onclick = () => handleDetailInteractionUpdate(-1);
-
-            if (activeDetailHabit.type === 'timed') {
-                const currentMinutes = getHabitProgress(activeDetailHabit, dateStr).value || 0;
-                timerSeconds_internal = currentMinutes * 60;
-                updateTimerDisplay(); // Initial display update
-
-                document.getElementById('startPauseTimerBtn').onclick = () => isTimerRunning ? pauseTimer() : startTimer();
-                document.getElementById('resetProgressBtn').onclick = resetTimedProgress;
-                 document.getElementById('completeTimedHabitBtn')?.addEventListener('click', completeTimedHabit);
-                document.querySelectorAll('.quick-add-btn').forEach(btn => {
-                    btn.onclick = () => addTimeToHabit(parseInt(btn.dataset.minutes));
-                });
-            }
-        };
-
-        function getDetailLogHTML(progress) {
-            const habit = activeDetailHabit;
-            let displayHTML = '', controlsHTML = '';
-            const dateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
-
-            let headerHTML = `<h3 class="font-bold text-lg mb-4">Progresso para <span class="text-purple-300">${dateText}</span></h3>`;
-
-            switch (habit.type) {
-                case 'yes_no':
-                    const isCompleted = progress.completed;
-                    displayHTML = `<i class="fas ${isCompleted ? 'fa-check-circle text-green-400' : 'fa-circle text-slate-500'} text-5xl transition-all"></i>`;
-                    controlsHTML = `<button id="detailToggleBtn" class="w-full ${isCompleted ? 'bg-slate-600' : 'bg-purple-500'} text-white font-bold py-3 rounded-xl text-lg control-btn active:scale-95">${isCompleted ? 'Desmarcar' : 'Concluir Hábito'}</button>`;
-                    break;
-                case 'measurable':
-                    displayHTML = `<span class="text-4xl font-bold">${progress.value}</span><span class="text-slate-400 ml-2">${habit.unit || ''}</span>`;
-                    controlsHTML = `
-                        <div class="flex justify-center items-center space-x-4">
-                            <button id="detailMinusBtn" aria-label="Diminuir progresso" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl font-light control-btn active:scale-90">-</button>
-                            <button id="detailPlusBtn" aria-label="Aumentar progresso" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl font-light control-btn active:scale-90">+</button>
-                        </div>`;
-                    break;
-                case 'timed':
-                    const goalInMinutes = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
-                    const loggedMinutes = progress.value || 0;
-                    const remainingMinutes = Math.max(0, goalInMinutes - loggedMinutes);
-                    const isGoalReached = remainingMinutes <= 0;
-
-                    const allQuickAddButtons = [1, 5, 10];
-                    const quickAddButtonsHTML = allQuickAddButtons
-                        .filter(min => min <= remainingMinutes) // Only show buttons if time is remaining
-                        .map(min => `<button data-minutes="${min}" class="quick-add-btn flex-1 bg-purple-800/60 p-3 rounded-lg control-btn text-sm">+${min} min</button>`)
-                        .join('');
-
-                    const completeButtonHTML = !isGoalReached ? `
-                        <button id="completeTimedHabitBtn" title="Completar Meta" class="h-full flex items-center justify-center bg-green-500/80 hover:bg-green-500 rounded-lg control-btn text-white px-4">
-                            <i class="fas fa-check"></i>
-                        </button>
-                    ` : '';
-
-                    headerHTML = `<h3 class="font-bold text-lg mb-2">Cronômetro</h3>`;
-                    displayHTML = `
-                        <div class="relative w-48 h-48 mx-auto my-2">
-                            <svg class="w-full h-full" viewBox="0 0 132 132">
-                                <circle class="stroke-current text-purple-900/70" cx="66" cy="66" r="60" fill="none" stroke-width="12"></circle>
-                                <circle id="timerProgressCircle" class="progress-ring-circle stroke-current ${isGoalReached ? 'text-green-400' : 'text-purple-400'}" cx="66" cy="66" r="60" fill="none" stroke-width="12" stroke-linecap="round" style="stroke-dasharray: 377; stroke-dashoffset: 377;"></circle>
-                            </svg>
-                            <div id="timerDisplayText" class="absolute inset-0 flex flex-col items-center justify-center">
-                                <span class="text-4xl font-bold tracking-wider">00:00</span>
-                                <span class="text-slate-400 text-sm">/ ${goalInMinutes} min</span>
-                            </div>
-                        </div>`;
-                    controlsHTML = `
-                        <div class="flex items-center justify-center space-x-4 mb-4">
-                            <button id="startPauseTimerBtn" class="w-32 bg-purple-500 text-white font-bold py-3 rounded-xl text-lg control-btn active:scale-95 flex items-center justify-center gap-2" ${isGoalReached ? 'disabled' : ''}>
-                                ${isGoalReached ? 'Concluído' : '<i class="fas fa-play"></i> Iniciar'}
-                            </button>
-                            <button id="resetProgressBtn" aria-label="Resetar progresso" class="w-16 h-12 rounded-xl bg-slate-600 control-btn active:scale-95 flex items-center justify-center text-lg"><i class="fas fa-undo"></i></button>
-                        </div>
-                        ${(quickAddButtonsHTML || completeButtonHTML) ? `
-                        <p class="text-xs text-center mb-2 text-slate-400">Ajuste manual:</p>
-                        <div class="flex gap-2 justify-center h-12">
-                            ${quickAddButtonsHTML}
-                            ${completeButtonHTML}
-                        </div>
-                        ` : ''}
-                    `;
-                    break;
+            let timeInfo = '';
+            if(habit.startTime){
+                const timeText = habit.endTime ? `${habit.startTime} - ${habit.endTime}` : habit.startTime;
+                timeInfo = `<span class="ml-2 text-xs bg-purple-900/50 px-2 py-1 rounded-md">${timeText}</span>`;
             }
 
-            return `${headerHTML}<div class="flex items-center justify-center mb-4 min-h-[60px]">${displayHTML}</div><div>${controlsHTML}</div>`;
-        }
-
-        function getDetailCalendarHTML(habit) {
-             const viewDate = new Date();
-             const year = viewDate.getFullYear();
-             const month = viewDate.getMonth();
-             const firstDay = new Date(year, month, 1).getDay();
-             const daysInMonth = new Date(year, month + 1, 0).getDate();
-             
-             let calendarDaysHTML = Array(firstDay).fill('<div></div>').join('');
-             
-             for(let day=1; day <= daysInMonth; day++) {
-                 const date = new Date(year, month, day);
-                 const isActive = isHabitActiveOnDate(habit, date);
-                 if (!isActive) {
-                     calendarDaysHTML += `<div class="calendar-day opacity-20 w-9 h-9 flex items-center justify-center">${day}</div>`;
-                     continue;
-                 }
-                 const progress = getHabitProgress(habit, toISODateString(date));
-                 const isCompleted = progress.completed;
-                 calendarDaysHTML += `<div class="calendar-day w-9 h-9 flex items-center justify-center ${isCompleted ? 'completed' : ''}">${day}</div>`;
-             }
-
-             return `
-                 <div class="flex justify-between items-center mb-4">
-                      <h3 class="font-bold text-lg">Calendário</h3>
-                      <div class="text-lg font-semibold">${viewDate.toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'})}</div>
-                 </div>
-                 <div class="grid grid-cols-7 gap-1 text-center mb-2">${WEEKDAYS_SHORT.map(d => `<div class="calendar-day-header">${d}</div>`).join('')}</div>
-                 <div class="grid grid-cols-7 gap-y-2 text-center">${calendarDaysHTML}</div>
-             `;
-        }
-
-        function getDetailStatsHTML(habit) {
-            const history = habit.history || {};
-            const completedCount = Object.values(history).filter(v => v.completed).length;
-            
             return `
-                <h3 class="font-bold text-lg mb-4">Estatísticas</h3>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-6 text-center">
-                    <div><p class="text-3xl font-bold">🔥 0</p><p class="text-sm text-purple-300">Sequência Atual</p></div>
-                    <div><p class="text-3xl font-bold">🏆 0</p><p class="text-sm text-purple-300">Melhor Sequência</p></div>
-                    <div><p class="text-3xl font-bold">🎯 0%</p><p class="text-sm text-purple-300">Taxa de Conclusão</p></div>
-                    <div><p class="text-3xl font-bold">✅ ${completedCount}</p><p class="text-sm text-purple-300">Total de Conclusões</p></div>
+                <div class="habit-item glass-effect p-4 rounded-2xl flex items-center justify-between cursor-pointer" data-id="${habit.id}">
+                    <div class="flex items-center flex-1 min-w-0">
+                        <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center text-xl mr-4">${habit.icon || '🎯'}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-white truncate">${habit.name}</p>
+                            <p class="text-sm text-purple-300 flex items-center">${progress.text} ${timeInfo}</p>
+                        </div>
+                    </div>
+                    <div class="w-12 h-12 relative flex-shrink-0 flex items-center justify-center ml-2">
+                        <svg class="w-full h-full" viewBox="0 0 44 44">
+                            <circle class="habit-progress-circle-bg" cx="22" cy="22" r="${radius}" fill="none" stroke-width="4"></circle>
+                            <circle class="habit-progress-circle-fg ${isCompleted ? 'completed' : ''}" cx="22" cy="22" r="${radius}" fill="none" stroke-width="4" stroke-linecap="round" style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};"></circle>
+                        </svg>
+                        <div class="absolute text-white text-lg">${isCompleted ? '<i class="fas fa-check"></i>' : ''}</div>
+                    </div>
                 </div>`;
+        }).join('');
+        
+        return `<div class="px-4 mb-6"><h3 class="text-lg font-semibold text-purple-300 mb-3">${title}</h3><div class="space-y-3">${habitHTML}</div></div>`;
+    };
+    
+    const getHabitProgress = (habit, dateStr) => {
+        const historyEntry = habit.history?.[dateStr] || { value: 0, completed: false, note: '' };
+        let percentage = 0;
+        let text = 'Pendente';
+        
+        switch (habit.type) {
+            case 'yes_no':
+                percentage = historyEntry.completed ? 100 : 0;
+                text = historyEntry.completed ? 'Concluído!' : 'Pendente';
+                break;
+            case 'measurable':
+                const goal = habit.goal || 1;
+                percentage = Math.min((historyEntry.value / goal) * 100, 100);
+                text = `${historyEntry.value} / ${goal} ${habit.unit || ''}`;
+                if (percentage >= 100) text = `🎉 Concluído!`;
+                break;
+            case 'timed':
+                const timeGoal = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
+                percentage = timeGoal > 0 ? Math.min((historyEntry.value / timeGoal) * 100, 100) : 0;
+                text = `${historyEntry.value || 0} / ${timeGoal} min`;
+                if (percentage >= 100) text = `🎉 Concluído!`;
+                break;
+        }
+        return { percentage, value: historyEntry.value || 0, text, completed: historyEntry.completed || percentage >= 100, note: historyEntry.note };
+    };
+
+    const updateOverallProgress = (habitsForDay, date) => {
+        const today = new Date();
+        if (date.toDateString() === today.toDateString()) { dayLabel.textContent = 'Hoje'; } 
+        else if (date.toDateString() === new Date(new Date().setDate(today.getDate() - 1)).toDateString()) { dayLabel.textContent = 'Ontem'; } 
+        else { dayLabel.textContent = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }); }
+        
+        if (habitsForDay.length === 0) { setOverallProgress(0); return; }
+        const totalProgressSum = habitsForDay.reduce((sum, habit) => sum + getHabitProgress(habit, toISODateString(date)).percentage, 0);
+        const avgProgress = totalProgressSum / habitsForDay.length;
+        setOverallProgress(avgProgress);
+    };
+
+    function setOverallProgress(percent) {
+        const radius = overallProgressCircle.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        const clampedPercent = Math.max(0, Math.min(100, percent));
+        const offset = circumference - (clampedPercent / 100) * circumference;
+        overallProgressCircle.style.strokeDashoffset = offset;
+        overallPercentage.textContent = `${Math.round(clampedPercent)}%`;
+    }
+
+    // --- Modal Logic ---
+    const openModal = (modal) => {
+        modal.classList.remove('hidden');
+        appContainer.classList.add('modal-open');
+    };
+    const closeModal = (modal) => {
+        modal.classList.add('hidden');
+        const anyModalOpen = document.querySelector('.modal-container:not(.hidden)');
+        if (!anyModalOpen) {
+            appContainer.classList.remove('modal-open');
+        }
+    };
+    
+    // --- Edit/Add Modal ---
+    const openEditModal = (habit = null) => {
+        habitForm.reset();
+        currentEditId = habit?.id || null;
+        document.getElementById('modalTitle').textContent = habit ? 'Editar Hábito' : 'Novo Hábito';
+        deleteBtn.classList.toggle('hidden', !habit);
+
+        const initialData = {
+            icon: '🎯', name: '', frequency: 'daily', weekdays: [], type: 'yes_no',
+            goal: 1, unit: 'vezes', timeGoal: 60, timeUnit: 'minutes',
+            date: toISODateString(selectedDate), // Default to selected date for new single events
+            startTime: '', endTime: '',
+            ...(habit || {})
+        };
+        
+        document.getElementById('habitName').value = initialData.name;
+        habitIconInput.value = initialData.icon;
+        openIconModalBtn.textContent = initialData.icon;
+        selectHabitType(initialData.type);
+        document.getElementById('habitGoal').value = initialData.goal;
+        document.getElementById('habitUnit').value = initialData.unit;
+        document.getElementById('habitTimeGoal').value = initialData.timeGoal;
+        document.getElementById('habitTimeUnit').value = initialData.timeUnit;
+        selectFrequency(initialData.frequency, initialData.weekdays);
+        document.getElementById('eventDate').value = initialData.date || toISODateString(selectedDate);
+        document.getElementById('startTime').value = initialData.startTime;
+        document.getElementById('endTime').value = initialData.endTime;
+
+        openModal(habitModal);
+    };
+    
+    // --- Icon Modal ---
+    const populateIconGrid = () => {
+        iconGrid.innerHTML = ICONS.map(icon => 
+            `<button type="button" aria-label="${icon}" class="icon-btn text-3xl p-2 rounded-lg hover:bg-purple-700 control-btn">${icon}</button>`
+        ).join('');
+        iconGrid.querySelectorAll('.icon-btn').forEach(btn => btn.onclick = () => selectIcon(btn.textContent));
+    };
+    
+    const selectIcon = (icon) => {
+        emojiInput.value = icon;
+        updateIconSelection();
+    };
+
+    const updateIconSelection = () => {
+        const emoji = emojiInput.value;
+        if(emoji) {
+            habitIconInput.value = emoji;
+            openIconModalBtn.textContent = emoji;
+        }
+    };
+    
+    // --- Frequency Logic ---
+    const populateWeekdays = () => {
+        customWeekdaysContainer.innerHTML = WEEKDAYS_SHORT.map((day, index) => 
+            `<button type="button" data-day="${index}" class="weekday-btn control-btn w-9 h-9 flex items-center justify-center rounded-full bg-slate-900/70">${day}</button>`
+        ).join('');
+        customWeekdaysContainer.querySelectorAll('.weekday-btn').forEach(btn => btn.onclick = () => toggleWeekday(parseInt(btn.dataset.day)));
+    };
+
+    const selectFrequency = (freq, weekdays = []) => {
+        document.getElementById('habitFrequency').value = freq;
+        freqButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.freq === freq));
+        
+        const isSingleDay = freq === 'none';
+        customWeekdaysContainer.classList.toggle('hidden', freq !== 'custom');
+        eventDateFieldWrapper.classList.toggle('hidden', !isSingleDay);
+        scheduleOptionalText.classList.toggle('hidden', isSingleDay);
+        
+        eventDateInput.required = isSingleDay;
+        dateRequiredIndicator.classList.toggle('hidden', !isSingleDay);
+
+        if (freq === 'custom') {
+            const weekdayBtns = customWeekdaysContainer.querySelectorAll('.weekday-btn');
+            weekdayBtns.forEach((btn, index) => {
+                const isActive = weekdays.includes(index);
+                btn.classList.toggle('active', isActive);
+                btn.dataset.selected = isActive;
+            });
+        }
+    };
+    const toggleWeekday = (index) => {
+        const btn = customWeekdaysContainer.querySelector(`[data-day='${index}']`);
+        const isSelected = btn.dataset.selected === 'true';
+        btn.dataset.selected = !isSelected;
+        btn.classList.toggle('active', !isSelected);
+    };
+
+    const selectHabitType = (type) => {
+        document.getElementById('habitType').value = type;
+        goalOptionsContainer.classList.toggle('hidden', type === 'yes_no');
+        measurableOptions.classList.toggle('hidden', type !== 'measurable');
+        timedOptions.classList.toggle('hidden', type !== 'timed');
+        habitTypeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.type === type));
+    };
+    
+    // --- Detail View Logic ---
+    const openDetailView = (habit) => {
+        activeDetailHabit = habit;
+        updateDetailViewUI();
+        habitDetailView.style.transform = 'translateX(0)';
+        appContainer.classList.add('modal-open'); // Keep app blurred for detail view as well
+    };
+
+    const closeDetailView = () => {
+        if (isTimerRunning) {
+            pauseTimer();
+        }
+        habitDetailView.style.transform = 'translateX(100%)';
+        const anyModalOpen = document.querySelector('.modal-container:not(.hidden)'); // Check if other modals are open
+        if (!anyModalOpen) {
+            appContainer.classList.remove('modal-open');
+        }
+        activeDetailHabit = null;
+    };
+
+    const updateDetailViewUI = () => {
+        if (!activeDetailHabit) return;
+        const { id, name, icon } = activeDetailHabit;
+        
+        detailIcon.textContent = icon || '🎯';
+        detailHabitName.textContent = name;
+        
+        detailLogTodayContainer.innerHTML = getDetailLogHTML();
+        calendarContainer.innerHTML = getDetailCalendarHTML();
+        statsContainer.innerHTML = getDetailStatsHTML();
+        
+        // Add/Update Notes Section
+        const detailScrollableContent = habitDetailView.querySelector('.overflow-y-auto');
+        let notesSectionContainer = detailScrollableContent.querySelector('#notesSectionContainer');
+        if (!notesSectionContainer) {
+            notesSectionContainer = document.createElement('div');
+            notesSectionContainer.id = 'notesSectionContainer';
+            notesSectionContainer.className = 'glass-effect p-6 rounded-2xl mx-2 mt-6 mb-8'; // mb-8 for bottom space
+            detailScrollableContent.appendChild(notesSectionContainer);
         }
         
-        const handleDetailInteractionUpdate = (change) => {
+        const dateStrForNotes = toISODateString(selectedDate);
+        const noteDateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+        notesSectionContainer.innerHTML = `
+            <h3 class="font-bold text-lg mb-2">Notas (${noteDateText})</h3>
+            <textarea id="habitNoteTextarea" class="w-full h-24 bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Adicione suas notas aqui..."></textarea>
+        `;
+        
+        const habitNoteTextarea = document.getElementById('habitNoteTextarea');
+        const currentNote = activeDetailHabit.history?.[dateStrForNotes]?.note || '';
+        habitNoteTextarea.value = currentNote;
+
+        habitNoteTextarea.addEventListener('input', () => {
+            const noteValue = habitNoteTextarea.value;
+            const habitIndex = habits.findIndex(h => h.id === activeDetailHabit.id);
+            if (habitIndex > -1) {
+                if (!habits[habitIndex].history) habits[habitIndex].history = {};
+                if (!habits[habitIndex].history[dateStrForNotes]) {
+                    habits[habitIndex].history[dateStrForNotes] = { value: 0, completed: false, note: '' };
+                }
+                habits[habitIndex].history[dateStrForNotes].note = noteValue;
+                activeDetailHabit = habits[habitIndex]; // Ensure activeDetailHabit is also updated
+                localStorage.setItem('habitsV6', JSON.stringify(habits)); 
+            }
+        });
+
+
+        if (timerInterval) clearInterval(timerInterval);
+        isTimerRunning = false;
+
+        // Re-attach listeners for dynamically created content from getDetailLogHTML
+        const detailToggleBtn = document.getElementById('detailToggleBtn');
+        if (detailToggleBtn) detailToggleBtn.onclick = () => {
             const dateStr = toISODateString(selectedDate);
             const currentProgress = getHabitProgress(activeDetailHabit, dateStr);
-            const newValue = Math.max(0, currentProgress.value + change);
-            updateHabitProgress(activeDetailHabit.id, dateStr, newValue);
-            updateDetailViewUI();
+            updateHabitProgress(id, dateStr, 0, !currentProgress.completed);
         };
+        const detailPlusBtn = document.getElementById('detailPlusBtn');
+        if(detailPlusBtn) detailPlusBtn.onclick = () => handleDetailInteractionUpdate(1);
+        const detailMinusBtn = document.getElementById('detailMinusBtn');
+        if(detailMinusBtn) detailMinusBtn.onclick = () => handleDetailInteractionUpdate(-1);
 
-        // --- Timer Functions ---
-        const startTimer = () => {
-            if (isTimerRunning) return;
-            isTimerRunning = true;
-            document.getElementById('startPauseTimerBtn').innerHTML = '<i class="fas fa-pause mr-2"></i> Pausar';
+        if (activeDetailHabit.type === 'timed') {
+            updateTimerDisplayState(); // handles button text and disabled state
+            document.getElementById('startPauseTimerBtn').onclick = () => isTimerRunning ? pauseTimer() : startTimer();
+            document.getElementById('resetProgressBtn').onclick = resetTimedProgress;
+            document.getElementById('completeTimedHabitBtn')?.addEventListener('click', completeTimedHabit);
+            document.querySelectorAll('.quick-add-btn').forEach(btn => {
+                btn.onclick = () => addTimeToHabit(parseInt(btn.dataset.minutes));
+            });
+        }
+        updateDetailProgressCircle();
+    };
+    
+    function createDetailProgressCircleHTML(progress, habit) {
+        const isCompleted = progress.percentage >= 100;
+        const radius = 60;
+        const circumference = 2 * Math.PI * radius;
+        // Initial offset to ensure animation starts from 0 or current progress
+        const initialOffset = circumference; // Will be animated by updateDetailProgressCircle
 
-            timerInterval = setInterval(() => {
-                timerSeconds_internal++;
-                updateTimerDisplay();
-            }, 1000);
-        };
+        let innerTextHTML = '';
+        switch (habit.type) {
+            case 'yes_no':
+                innerTextHTML = isCompleted ? `<i class="fas fa-check text-6xl"></i>` : `<i class="fas fa-times text-6xl text-slate-500"></i>`;
+                break;
+            case 'measurable':
+                innerTextHTML = `<span class="text-4xl font-bold">${progress.value}</span><span class="text-slate-400 mt-1">/ ${habit.goal} ${habit.unit || ''}</span>`;
+                break;
+            case 'timed':
+                const goalInMinutes = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
+                innerTextHTML = `<span class="text-4xl font-bold tracking-wider">${formatTime((progress.value || 0) * 60)}</span><span class="text-slate-400 text-sm mt-1">/ ${goalInMinutes} min</span>`;
+                break;
+        }
 
-        const pauseTimer = () => {
-            if (!isTimerRunning) return;
-            isTimerRunning = false;
-            clearInterval(timerInterval);
-            timerInterval = null;
-            
-            saveTimerProgress();
-            updateDetailViewUI(); // Refresh UI to reflect paused state and new progress
-        };
+        return `
+            <div class="relative w-48 h-48 mx-auto mb-6">
+                <svg class="w-full h-full" viewBox="0 0 132 132">
+                    <circle class="stroke-current text-purple-900/70" cx="66" cy="66" r="${radius}" fill="none" stroke-width="12"></circle>
+                    <circle id="detailProgressCircle" class="progress-ring-circle stroke-current ${isCompleted ? 'text-green-400' : 'text-purple-400'}" cx="66" cy="66" r="${radius}" fill="none" stroke-width="12" stroke-linecap="round" style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${initialOffset};"></circle>
+                </svg>
+                <div id="detailProgressText" class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    ${innerTextHTML}
+                </div>
+            </div>`;
+    }
+    
+    function updateDetailProgressCircle() {
+        const circleEl = document.getElementById('detailProgressCircle');
+        if (!circleEl || !activeDetailHabit) return;
 
-        const resetTimedProgress = () => {
-            pauseTimer();
-            timerSeconds_internal = 0;
-            updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), 0);
-            updateDetailViewUI();
-        };
+        const progress = getHabitProgress(activeDetailHabit, toISODateString(selectedDate));
+        const radius = circleEl.r.baseVal.value;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (progress.percentage / 100) * circumference;
         
-        const addTimeToHabit = (minutesToAdd) => {
-            timerSeconds_internal += minutesToAdd * 60;
-            saveTimerProgress();
-            updateDetailViewUI();
-        };
+        // Timeout to allow CSS transition to apply smoothly after innerHTML change
+        setTimeout(() => {
+            circleEl.style.strokeDashoffset = offset;
+        }, 50);
         
-        const completeTimedHabit = () => {
-            pauseTimer();
-            const goalInMinutes = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
-            updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), goalInMinutes);
-            updateDetailViewUI();
-        };
+        circleEl.classList.toggle('text-green-400', progress.percentage >= 100);
+        circleEl.classList.toggle('text-purple-400', progress.percentage < 100);
 
-        const saveTimerProgress = () => {
-            const totalMinutes = Math.floor(timerSeconds_internal / 60);
-            const dateStr = toISODateString(selectedDate);
-            updateHabitProgress(activeDetailHabit.id, dateStr, totalMinutes);
-        };
-
-        const updateTimerDisplay = () => {
-            const timerTextEl = document.getElementById('timerDisplayText');
-            if (timerTextEl) {
-                const loggedMinutes = Math.floor(timerSeconds_internal / 60);
-                const currentSecondsOnly = timerSeconds_internal % 60;
-                timerTextEl.querySelector('span:first-child').textContent = `${String(loggedMinutes).padStart(2, '0')}:${String(currentSecondsOnly).padStart(2, '0')}`;
+        // Update inner text of circle too
+        const detailProgressText = document.getElementById('detailProgressText');
+        if (detailProgressText) {
+            let innerTextHTML = '';
+            switch (activeDetailHabit.type) {
+                case 'yes_no':
+                    innerTextHTML = progress.completed ? `<i class="fas fa-check text-6xl"></i>` : `<i class="fas fa-times text-6xl text-slate-500"></i>`;
+                    break;
+                case 'measurable':
+                    innerTextHTML = `<span class="text-4xl font-bold">${progress.value}</span><span class="text-slate-400 mt-1">/ ${activeDetailHabit.goal} ${activeDetailHabit.unit || ''}</span>`;
+                    break;
+                case 'timed':
+                    const goalInMinutes = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
+                    innerTextHTML = `<span class="text-4xl font-bold tracking-wider">${formatTime((progress.value || 0) * 60)}</span><span class="text-slate-400 text-sm mt-1">/ ${goalInMinutes} min</span>`;
+                    break;
             }
-            
-            const timerCircleEl = document.getElementById('timerProgressCircle');
-            if(timerCircleEl && activeDetailHabit) {
-                const goalInMinutes = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
-                const loggedMinutes = Math.floor(timerSeconds_internal / 60);
-                const percentage = goalInMinutes > 0 ? Math.min((loggedMinutes / goalInMinutes) * 100, 100) : 0;
+            detailProgressText.innerHTML = innerTextHTML;
+        }
+    }
+
+    function getDetailLogHTML() {
+        const habit = activeDetailHabit;
+        const dateStr = toISODateString(selectedDate);
+        const progress = getHabitProgress(habit, dateStr);
+        const dateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+        
+        let controlsHTML = '';
+
+        const headerHTML = `<h3 class="font-bold text-lg mb-2">Progresso para <span class="text-purple-300">${dateText}</span></h3>`;
+        const circleHTML = createDetailProgressCircleHTML(progress, habit); // Circle HTML generated here
+
+        switch (habit.type) {
+            case 'yes_no':
+                controlsHTML = `<button id="detailToggleBtn" class="w-full ${progress.completed ? 'bg-slate-600 hover:bg-slate-700' : 'bg-purple-500 hover:bg-purple-600'} text-white font-bold py-3 rounded-xl text-lg control-btn active:scale-95">${progress.completed ? 'Desmarcar' : 'Concluir Hábito'}</button>`;
+                break;
+            case 'measurable':
+                controlsHTML = `
+                    <div class="flex justify-center items-center space-x-4">
+                        <button id="detailMinusBtn" aria-label="Diminuir progresso" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl font-light control-btn active:scale-90">-</button>
+                        <button id="detailPlusBtn" aria-label="Aumentar progresso" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl font-light control-btn active:scale-90">+</button>
+                    </div>`;
+                break;
+            case 'timed':
+                const goalInMinutes = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
+                const loggedMinutes = progress.value || 0;
+                const isGoalReached = loggedMinutes >= goalInMinutes;
+
+                const quickAddTimes = [1, 5, 10, 15, 30];
+                let quickAddButtonsHTML = '';
+                if (!isGoalReached) {
+                    quickAddButtonsHTML = quickAddTimes
+                        .map(min => `<button data-minutes="${min}" class="quick-add-btn flex-1 bg-purple-800/60 p-3 rounded-lg control-btn text-sm">+${min} min</button>`)
+                        .join('');
+                }
                 
-                const radius = timerCircleEl.r.baseVal.value;
-                const circumference = radius * 2 * Math.PI;
-                const offset = circumference - (percentage / 100) * circumference;
-                timerCircleEl.style.strokeDashoffset = offset;
-            }
-        };
+                const completeButtonHTML = !isGoalReached ? `
+                    <button id="completeTimedHabitBtn" title="Completar Meta" class="h-full flex items-center justify-center bg-green-500/80 hover:bg-green-500 rounded-lg control-btn text-white px-4">
+                        <i class="fas fa-check"></i>
+                    </button>` : '';
 
-        // --- Data Persistence ---
-        const saveHabits = () => {
-            localStorage.setItem('habitsV6', JSON.stringify(habits));
-            renderViewForDate(selectedDate);
-            if (activeDetailHabit) {
-                 activeDetailHabit = habits.find(h => h.id === activeDetailHabit.id);
-                 if(activeDetailHabit) {
-                    updateDetailViewUI();
-                 } else {
-                    closeDetailView();
-                 }
-            }
-        };
+                controlsHTML = `
+                    <div class="flex items-center justify-center space-x-4 mb-4">
+                        <button id="startPauseTimerBtn" class="w-36 bg-purple-500 text-white font-bold py-3 rounded-xl text-lg control-btn active:scale-95 flex items-center justify-center gap-2">
+                            {/* Content set by updateTimerDisplayState */}
+                        </button>
+                        <button id="resetProgressBtn" aria-label="Resetar progresso" class="w-16 h-12 rounded-xl bg-slate-600 control-btn active:scale-95 flex items-center justify-center text-lg"><i class="fas fa-undo"></i></button>
+                    </div>
+                    ${(quickAddButtonsHTML || completeButtonHTML) && !isGoalReached ? `
+                    <p class="text-xs text-center mb-2 text-slate-400">Ajuste rápido:</p>
+                    <div class="flex gap-2 justify-center h-12">
+                        ${quickAddButtonsHTML}
+                        ${completeButtonHTML}
+                    </div>` : ''}`;
+                break;
+        }
 
-        const updateHabitProgress = (habitId, dateStr, newValue, completedStatus = null) => {
-            const habit = habits.find(h => h.id === habitId);
-            if (!habit) return;
-            if (!habit.history) habit.history = {};
+        return `${headerHTML}${circleHTML}<div>${controlsHTML}</div>`;
+    }
 
-            let isCompleted;
-            if (completedStatus !== null) {
-                isCompleted = completedStatus;
-            } else {
-                if (habit.type === 'measurable') {
-                    isCompleted = newValue >= (habit.goal || 1);
-                } else if (habit.type === 'timed') {
-                    const goalInMinutes = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
-                    isCompleted = newValue >= (goalInMinutes || 1);
-                }
-                else {
-                    isCompleted = habit.history[dateStr]?.completed || false;
-                }
-            }
-            
-            habit.history[dateStr] = { value: newValue, completed: isCompleted };
-            saveHabits();
-        };
-
-        // --- Event Listeners ---
-        addHabitBtn.addEventListener('click', () => openEditModal());
-        cancelBtn.addEventListener('click', () => closeModal(habitModal));
-        
-        // Icon Modal Listeners
-        openIconModalBtn.addEventListener('click', () => {
-            emojiInput.value = habitIconInput.value; // Sync input with current icon
-            openModal(iconModal);
-        });
-        emojiInput.addEventListener('input', updateIconSelection);
-        confirmIconBtn.addEventListener('click', () => {
-            updateIconSelection();
-            closeModal(iconModal);
-        });
-
-        closeDetailViewBtn.addEventListener('click', closeDetailView);
-        editHabitFromDetailBtn.addEventListener('click', () => {
-             if(activeDetailHabit) {
-                 const habitToEdit = JSON.parse(JSON.stringify(activeDetailHabit));
-                 closeDetailView();
-                 setTimeout(() => openEditModal(habitToEdit), 150);
+    function getDetailCalendarHTML() {
+         const habit = activeDetailHabit;
+         const viewDate = new Date(selectedDate); // Use selectedDate as the reference for the calendar month
+         const year = viewDate.getFullYear();
+         const month = viewDate.getMonth();
+         const firstDayOfMonth = new Date(year, month, 1).getDay(); // Day of the week (0=Sun, 1=Mon, ...)
+         const daysInMonth = new Date(year, month + 1, 0).getDate();
+         
+         let calendarDaysHTML = Array(firstDayOfMonth).fill('<div></div>').join('');
+         
+         for(let day=1; day <= daysInMonth; day++) {
+             const date = new Date(year, month, day);
+             const isActiveOnThisCalDay = isHabitActiveOnDate(habit, date);
+             
+             if (!isActiveOnThisCalDay) {
+                 calendarDaysHTML += `<div class="calendar-day opacity-30 w-9 h-9 flex items-center justify-center text-slate-600">${day}</div>`;
+                 continue;
              }
-        });
-        
-        habitTypeButtons.forEach(button => button.addEventListener('click', () => selectHabitType(button.dataset.type)));
-        freqButtons.forEach(button => button.addEventListener('click', () => selectFrequency(button.dataset.freq)));
-        
-        habitForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('habitName').value.trim();
-            if (!name) return;
+             const progress = getHabitProgress(habit, toISODateString(date));
+             const isCompleted = progress.completed;
+             const isCurrentSelectedDay = toISODateString(date) === toISODateString(selectedDate);
 
-            // Form validation check before proceeding
-            if (!habitForm.checkValidity()) {
-                habitForm.reportValidity();
+             calendarDaysHTML += `<div class="calendar-day w-9 h-9 flex items-center justify-center rounded-full text-sm
+                ${isCompleted ? 'completed' : ''} 
+                ${isCurrentSelectedDay ? 'ring-2 ring-purple-400' : ''}
+                ${!isCompleted && isActiveOnThisCalDay ? 'border border-slate-700' : ''}
+                ">${day}</div>`;
+         }
+
+         return `
+             <div class="flex justify-between items-center mb-4">
+                  <h3 class="font-bold text-lg">Calendário</h3>
+                  <div class="text-lg font-semibold">${viewDate.toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'})}</div>
+             </div>
+             <div class="grid grid-cols-7 gap-1 text-center mb-2">${WEEKDAYS_SHORT.map(d => `<div class="calendar-day-header">${d}</div>`).join('')}</div>
+             <div class="grid grid-cols-7 gap-y-2 text-center">${calendarDaysHTML}</div>
+         `;
+    }
+
+    function getDetailStatsHTML() {
+        const habit = activeDetailHabit;
+        if (!habit || habit.frequency === 'none') return ''; 
+
+        const history = habit.history || {};
+        let completedCount = 0;
+        let currentStreak = 0;
+        let maxStreak = 0;
+        let tempStreak = 0;
+        let totalActiveDays = 0;
+
+        const sortedDates = Object.keys(history).sort((a,b) => new Date(b) - new Date(a)); // Most recent first
+
+        let todayForStreak = new Date(toISODateString(new Date())); // Today without time
+        let yesterdayForStreak = new Date(todayForStreak);
+        yesterdayForStreak.setDate(todayForStreak.getDate() - 1);
+        
+        let streakBroken = false;
+
+        for (let i = 0; i < 365; i++) { // Check up to a year back for streaks
+            const checkDate = new Date();
+            checkDate.setDate(checkDate.getDate() - i);
+            const checkDateStr = toISODateString(checkDate);
+
+            if (isHabitActiveOnDate(habit, checkDate)) {
+                totalActiveDays++;
+                const entry = history[checkDateStr];
+                if (entry && entry.completed) {
+                    completedCount++;
+                    if (!streakBroken) { // currentStreak only counts if not broken from today
+                        currentStreak++;
+                    }
+                    tempStreak++;
+                } else {
+                    if (i === 0 && isHabitActiveOnDate(habit, new Date()) && (!entry || !entry.completed)) {
+                         // If today is active and not completed, current streak is 0
+                        streakBroken = true; 
+                        currentStreak = 0;
+                    } else if (i > 0) {
+                        streakBroken = true; // Mark as broken for current streak calculation
+                    }
+                    maxStreak = Math.max(maxStreak, tempStreak);
+                    tempStreak = 0;
+                }
+            } else { // If day is not active, it doesn't break the streak, just skip
+                if (tempStreak > 0 && i > 0 ) { // Day not active, but was active before
+                    // streak continues if prev day was active. This logic needs refinement based on definition of streak
+                    // For now, non-active days simply don't count towards or against.
+                }
+            }
+        }
+        maxStreak = Math.max(maxStreak, tempStreak); // Final check for tempStreak
+        if (!isHabitActiveOnDate(habit, new Date()) || !history[toISODateString(new Date())]?.completed) {
+            // If today is not active or not completed, current streak needs to be verified based on yesterday
+            if(!history[toISODateString(yesterdayForStreak)]?.completed && isHabitActiveOnDate(habit, yesterdayForStreak) ) {
+                 currentStreak = 0;
+            }
+        }
+
+
+        const completionRate = totalActiveDays > 0 ? Math.round((completedCount / totalActiveDays) * 100) : 0;
+        
+        return `
+            <h3 class="font-bold text-lg mb-4">Estatísticas</h3>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-6 text-center">
+                <div><p class="text-3xl font-bold">🔥 ${currentStreak}</p><p class="text-sm text-purple-300">Sequência Atual</p></div>
+                <div><p class="text-3xl font-bold">🏆 ${maxStreak}</p><p class="text-sm text-purple-300">Melhor Sequência</p></div>
+                <div><p class="text-3xl font-bold">🎯 ${completionRate}%</p><p class="text-sm text-purple-300">Taxa de Conclusão</p></div>
+                <div><p class="text-3xl font-bold">✅ ${completedCount}</p><p class="text-sm text-purple-300">Total de Conclusões</p></div>
+            </div>`;
+    }
+    
+    const handleDetailInteractionUpdate = (change) => {
+        const dateStr = toISODateString(selectedDate);
+        const currentProgress = getHabitProgress(activeDetailHabit, dateStr);
+        const newValue = Math.max(0, currentProgress.value + change);
+        updateHabitProgress(activeDetailHabit.id, dateStr, newValue);
+    };
+
+    // --- Timer Functions ---
+     const updateTimerDisplayState = () => {
+        if (!activeDetailHabit || activeDetailHabit.type !== 'timed') return;
+
+        const startPauseBtn = document.getElementById('startPauseTimerBtn');
+        if (!startPauseBtn) return;
+
+        const dateStr = toISODateString(selectedDate);
+        const progress = getHabitProgress(activeDetailHabit, dateStr);
+        const goalInMinutes = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
+        const isGoalReached = (progress.value || 0) >= goalInMinutes;
+
+        startPauseBtn.disabled = isGoalReached;
+        if (isGoalReached) {
+            startPauseBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Concluído';
+            if(isTimerRunning) pauseTimer();
+        } else {
+            startPauseBtn.innerHTML = isTimerRunning ? '<i class="fas fa-pause mr-2"></i> Pausar' : '<i class="fas fa-play mr-2"></i> Iniciar';
+        }
+    };
+
+    const startTimer = () => {
+        if (isTimerRunning || !activeDetailHabit) return;
+        isTimerRunning = true;
+        updateTimerDisplayState();
+        
+        const goalInSeconds = (activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal) * 60;
+
+        timerInterval = setInterval(() => {
+            const dateStr = toISODateString(selectedDate);
+            let currentMinutes = getHabitProgress(activeDetailHabit, dateStr).value || 0;
+            
+            if (currentMinutes * 60 >= goalInSeconds) {
+                pauseTimer();
+                updateHabitProgress(activeDetailHabit.id, dateStr, currentMinutes, true); // Ensure completed is true
                 return;
             }
 
-            const selectedWeekdays = [];
-            if (document.getElementById('habitFrequency').value === 'custom') {
-                customWeekdaysContainer.querySelectorAll('.weekday-btn').forEach((btn, index) => {
-                    if (btn.dataset.selected === 'true') selectedWeekdays.push(index);
-                });
-            }
-
-            const habitData = {
-                id: currentEditId || Date.now(),
-                name,
-                icon: habitIconInput.value,
-                frequency: document.getElementById('habitFrequency').value,
-                weekdays: selectedWeekdays,
-                type: document.getElementById('habitType').value,
-                goal: parseInt(document.getElementById('habitGoal').value) || 1,
-                unit: document.getElementById('habitUnit').value.trim() || 'vezes',
-                timeGoal: parseInt(document.getElementById('habitTimeGoal').value) || 60,
-                timeUnit: document.getElementById('habitTimeUnit').value,
-                date: document.getElementById('eventDate').value || null,
-                startTime: document.getElementById('startTime').value || null,
-                endTime: document.getElementById('endTime').value || null,
-                history: currentEditId ? habits.find(h => h.id === currentEditId).history : {}
-            };
+            currentMinutes += 1/60; // Add one second
+            updateHabitProgress(activeDetailHabit.id, dateStr, currentMinutes);
             
-            if (currentEditId) {
-                const index = habits.findIndex(h => h.id === currentEditId);
-                if (index !== -1) habits[index] = { ...habits[index], ...habitData };
-            } else { habits.push(habitData); }
-            saveHabits();
-            closeModal(habitModal);
-        });
+        }, 1000);
+    };
 
-        deleteBtn.addEventListener('click', () => {
-            if (currentEditId) {
+    const pauseTimer = () => {
+        if (!isTimerRunning) return;
+        isTimerRunning = false;
+        clearInterval(timerInterval);
+        timerInterval = null;
+        updateTimerDisplayState(); 
+        // updateDetailViewUI(); // This was causing issues; updateTimerDisplayState is more targeted.
+    };
+
+    const resetTimedProgress = () => {
+        if (isTimerRunning) pauseTimer();
+        updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), 0);
+    };
+    
+    const addTimeToHabit = (minutesToAdd) => {
+        const dateStr = toISODateString(selectedDate);
+        const currentMinutes = getHabitProgress(activeDetailHabit, dateStr).value || 0;
+        const newMinutes = currentMinutes + minutesToAdd;
+        updateHabitProgress(activeDetailHabit.id, dateStr, newMinutes);
+    };
+    
+    const completeTimedHabit = () => {
+        if (isTimerRunning) pauseTimer();
+        const goalInMinutes = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
+        updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), goalInMinutes, true);
+    };
+
+    // --- Data Persistence ---
+    const saveHabits = () => {
+        localStorage.setItem('habitsV6', JSON.stringify(habits));
+        renderViewForDate(selectedDate); // Re-render main list
+        if (activeDetailHabit) {
+             const updatedHabit = habits.find(h => h.id === activeDetailHabit.id);
+             if(updatedHabit) {
+                activeDetailHabit = updatedHabit; // Ensure activeDetailHabit has the latest data
+                updateDetailViewUI(); // Re-render detail view
+             } else { // Habit was deleted
+                closeDetailView();
+             }
+        }
+    };
+
+    const updateHabitProgress = (habitId, dateStr, newValue, completedStatus = null) => {
+        const habitIndex = habits.findIndex(h => h.id === habitId);
+        if (habitIndex === -1) return;
+
+        const habit = habits[habitIndex];
+        if (!habit.history) habit.history = {};
+        
+        const existingEntry = habit.history[dateStr] || { value: 0, completed: false, note: '' };
+
+        let isCompleted;
+        if (completedStatus !== null) {
+            isCompleted = completedStatus;
+        } else {
+            if (habit.type === 'yes_no') { // For yes/no, newValue is not used for completion, only completedStatus
+                isCompleted = existingEntry.completed; // This case should be handled by passing completedStatus
+            } else if (habit.type === 'measurable') {
+                isCompleted = newValue >= (habit.goal || 1);
+            } else if (habit.type === 'timed') {
+                const goalInMinutes = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
+                isCompleted = newValue >= (goalInMinutes || 1);
+            } else { // Default case or unknown type
+                 isCompleted = existingEntry.completed;
+            }
+        }
+        
+        habit.history[dateStr] = { 
+            value: newValue, 
+            completed: isCompleted,
+            note: existingEntry.note 
+        };
+        
+        habits[habitIndex] = habit; // Update the habit in the main array
+        if (activeDetailHabit && activeDetailHabit.id === habitId) {
+             activeDetailHabit = { ...habit }; // Update activeDetailHabit if it's the one being changed
+        }
+        saveHabits();
+    };
+
+    // --- Event Listeners ---
+    addHabitBtn.addEventListener('click', () => openEditModal());
+    cancelBtn.addEventListener('click', () => closeModal(habitModal));
+    
+    openIconModalBtn.addEventListener('click', () => {
+        emojiInput.value = habitIconInput.value; 
+        openModal(iconModal);
+    });
+    emojiInput.addEventListener('input', updateIconSelection);
+    confirmIconBtn.addEventListener('click', () => {
+        updateIconSelection();
+        closeModal(iconModal);
+    });
+
+    closeDetailViewBtn.addEventListener('click', closeDetailView);
+    editHabitFromDetailBtn.addEventListener('click', () => {
+         if(activeDetailHabit) {
+             const habitToEdit = JSON.parse(JSON.stringify(activeDetailHabit)); // Deep copy
+             closeDetailView();
+             // Timeout to allow detail view to close before modal opens
+             setTimeout(() => openEditModal(habitToEdit), 300); 
+         }
+    });
+    
+    habitTypeButtons.forEach(button => button.addEventListener('click', () => selectHabitType(button.dataset.type)));
+    freqButtons.forEach(button => button.addEventListener('click', () => selectFrequency(button.dataset.freq)));
+    
+    habitForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('habitName').value.trim();
+        if (!name) return;
+
+        if (!habitForm.checkValidity()) {
+            habitForm.reportValidity();
+            return;
+        }
+
+        const selectedWeekdays = [];
+        if (document.getElementById('habitFrequency').value === 'custom') {
+            customWeekdaysContainer.querySelectorAll('.weekday-btn').forEach((btn, index) => {
+                if (btn.dataset.selected === 'true') selectedWeekdays.push(index);
+            });
+        }
+
+        const habitData = {
+            id: currentEditId || Date.now(),
+            name,
+            icon: habitIconInput.value,
+            frequency: document.getElementById('habitFrequency').value,
+            weekdays: selectedWeekdays,
+            type: document.getElementById('habitType').value,
+            goal: parseFloat(document.getElementById('habitGoal').value) || 1,
+            unit: document.getElementById('habitUnit').value.trim() || 'vezes',
+            timeGoal: parseFloat(document.getElementById('habitTimeGoal').value) || 60,
+            timeUnit: document.getElementById('habitTimeUnit').value,
+            date: document.getElementById('eventDate').value || null,
+            startTime: document.getElementById('startTime').value || null,
+            endTime: document.getElementById('endTime').value || null,
+            history: currentEditId ? habits.find(h => h.id === currentEditId).history || {} : {}
+        };
+        
+        if (currentEditId) {
+            const index = habits.findIndex(h => h.id === currentEditId);
+            if (index !== -1) habits[index] = { ...habits[index], ...habitData };
+        } else { habits.push(habitData); }
+        saveHabits();
+        closeModal(habitModal);
+    });
+
+    deleteBtn.addEventListener('click', () => {
+        if (currentEditId) {
+            if (confirm('Tem certeza que deseja excluir este hábito? Esta ação não pode ser desfeita.')) {
                 habits = habits.filter(h => h.id !== currentEditId);
                 saveHabits();
                 closeModal(habitModal);
+                if (activeDetailHabit && activeDetailHabit.id === currentEditId) {
+                    closeDetailView(); // Close detail view if the deleted habit was active
+                }
             }
-        });
-
-
-        // --- Initial Load ---
-        populateIconGrid();
-        populateWeekdays();
-        renderViewForDate(selectedDate);
+        }
     });
-    </script>
+
+    // --- Initial Load ---
+    populateIconGrid();
+    populateWeekdays();
+    selectFrequency('daily'); // Set default for new habits in modal if not editing
+    selectHabitType('yes_no'); // Set default for new habits in modal if not editing
+    renderViewForDate(selectedDate);
+});
+</script>
 </body>
 </html>
