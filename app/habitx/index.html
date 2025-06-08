@@ -91,6 +91,11 @@
             filter: invert(0.8);
             cursor: pointer;
         }
+        
+        input:required:invalid {
+            border-bottom-color: #f87171; /* red-400 */
+        }
+
 
         /* Calendar and new controls styling */
         .calendar-day.completed {
@@ -169,7 +174,7 @@
                 <div class="flex items-center gap-4 mb-6">
                     <button type="button" id="openIconModalBtn" aria-label="Escolher ícone" class="text-4xl p-3 bg-slate-700/50 rounded-2xl control-btn hover:scale-110 active:scale-100">🎯</button>
                     <input type="hidden" id="habitIcon" value="🎯">
-                    <input id="habitName" type="text" placeholder="Nome do Hábito" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white text-lg placeholder-purple-300 focus:outline-none focus:border-purple-300 transition">
+                    <input id="habitName" type="text" placeholder="Nome do Hábito" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white text-lg placeholder-purple-300 focus:outline-none focus:border-purple-300 transition" required>
                 </div>
 
                 <div class="space-y-6">
@@ -217,8 +222,8 @@
                         <p class="mb-2 text-purple-300 font-semibold">Horário <span class="font-light text-sm">(Opcional)</span></p>
                         <div class="grid grid-cols-3 gap-4">
                             <div id="eventDateField" class="col-span-1">
-                                <label for="eventDate" class="text-xs text-purple-400">Data</label>
-                                <input type="date" id="eventDate" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white focus:outline-none">
+                                <label for="eventDate" class="text-xs text-purple-400 flex items-center">Data <span id="dateRequiredIndicator" class="text-red-400 ml-1 hidden">*</span></label>
+                                <input type="date" id="eventDate" class="w-full bg-transparent border-b-2 border-purple-400 p-2 text-white focus:outline-none transition-colors">
                             </div>
                             <div class="col-span-1">
                                  <label for="startTime" class="text-xs text-purple-400">Início</label>
@@ -300,6 +305,8 @@
         const freqButtons = document.querySelectorAll('.freq-btn');
         const customWeekdaysContainer = document.getElementById('customWeekdays');
         const eventDateField = document.getElementById('eventDateField');
+        const eventDateInput = document.getElementById('eventDate');
+        const dateRequiredIndicator = document.getElementById('dateRequiredIndicator');
 
         // Icon Modal
         const iconModal = document.getElementById('iconModal');
@@ -595,8 +602,13 @@
             document.getElementById('habitFrequency').value = freq;
             freqButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.freq === freq));
             
+            const isSingleDay = freq === 'none';
             customWeekdaysContainer.classList.toggle('hidden', freq !== 'custom');
-            eventDateField.classList.toggle('hidden', freq !== 'none');
+            eventDateField.classList.toggle('hidden', !isSingleDay);
+            
+            // Handle required attribute for single day event date
+            eventDateInput.required = isSingleDay;
+            dateRequiredIndicator.classList.toggle('hidden', !isSingleDay);
 
             if (freq === 'custom') {
                 const weekdayBtns = customWeekdaysContainer.querySelectorAll('.weekday-btn');
@@ -946,6 +958,12 @@
             const name = document.getElementById('habitName').value.trim();
             if (!name) return;
 
+            // Form validation check before proceeding
+            if (!habitForm.checkValidity()) {
+                habitForm.reportValidity();
+                return;
+            }
+
             const selectedWeekdays = [];
             if (document.getElementById('habitFrequency').value === 'custom') {
                 customWeekdaysContainer.querySelectorAll('.weekday-btn').forEach((btn, index) => {
@@ -980,7 +998,6 @@
 
         deleteBtn.addEventListener('click', () => {
             if (currentEditId) {
-                // Using a custom modal for confirm would be better, but for now this is fine.
                 habits = habits.filter(h => h.id !== currentEditId);
                 saveHabits();
                 closeModal(habitModal);
