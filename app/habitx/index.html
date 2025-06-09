@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>HabitX - Rastreador de Hábitos</title>
-    <meta name="theme-color" content="#120c1f"/>
+    <meta name="theme-color" content="#100b1a"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,6 +26,7 @@
             touch-action: pan-x pan-y;
             background-color: var(--bg-color);
             color: #e2e8f0;
+            transition: background-color 0.4s ease;
         }
         #app.modal-open {
             transform: scale(0.98);
@@ -61,18 +62,16 @@
         .bg-primary:hover { background-color: var(--primary-color-dark); }
         .border-primary { border-color: var(--primary-color); }
         .focus-border-primary:focus { border-color: var(--primary-color-light); }
-        .ring-primary { ring-color: var(--primary-color); }
+        .ring-primary, .focus-ring-primary:focus { --tw-ring-color: var(--primary-color) }
         .placeholder-primary::placeholder { color: var(--primary-color-light); opacity: 0.8; }
         .active-btn { background-color: var(--primary-color) !important; color: white; }
-        .freq-btn.active, .weekday-btn.active, .habit-type-btn.active {
-            box-shadow: 0 0 10px var(--primary-color);
-        }
+        .freq-btn.active, .weekday-btn.active, .habit-type-btn.active { box-shadow: 0 0 10px var(--primary-color); }
         .date-strip-item.active { background-color: var(--primary-color); color: white; transform: scale(1.1); }
-        .habit-progress-circle-fg { stroke: var(--primary-color-light); transition: stroke-dashoffset 0.4s ease, stroke 0.3s ease; }
+        .habit-progress-circle-fg { stroke: var(--primary-color-light); transition: stroke-dashoffset 0.8s cubic-bezier(0.65, 0, 0.35, 1), stroke 0.3s ease; }
         .habit-progress-circle-fg.completed { stroke: var(--green-color); }
         .progress-ring-circle.main { stroke: var(--primary-color-light); }
-        .detail-progress-circle.completed { color: var(--green-color); }
-        .detail-progress-circle.in-progress { color: var(--primary-color); }
+        .detail-progress-circle.completed { stroke: var(--green-color); }
+        .detail-progress-circle.in-progress { stroke: var(--primary-color); }
         /* --- END THEME COLOR CLASSES --- */
 
         .habit-progress-circle-bg { stroke: rgba(255, 255, 255, 0.1); }
@@ -85,41 +84,30 @@
         .icon-btn:hover { transform: scale(1.2); }
         #startPauseTimerBtn:disabled { background-color: var(--green-color) !important; color: white !important; cursor: not-allowed; opacity: 0.8; }
         
-        .color-swatch { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 2px solid transparent; }
+        .color-swatch { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 2px solid transparent; }
         .color-swatch.active { transform: scale(1.15); box-shadow: 0 0 0 3px var(--bg-color), 0 0 0 5px var(--primary-color); }
+        #colorPickerInput { -webkit-appearance: none; -moz-appearance: none; appearance: none; width: 40px; height: 40px; background-color: transparent; border: none; cursor: pointer; }
+        #colorPickerInput::-webkit-color-swatch { border-radius: 50%; border: 2px solid #94a3b8; }
+        #colorPickerInput::-moz-color-swatch { border-radius: 50%; border: 2px solid #94a3b8; }
         
         /* -- STYLES NOTES SECTION -- */
-        #habitNoteTextarea { min-height: 120px; max-height: 350px; resize: vertical; } /* Default size, max height and allow vertical resize */
-        #notePreview { min-height: 120px; background: rgba(40, 30, 60, 0.5); padding: 0.75rem; border-radius: 0.5rem; border: 1px solid rgba(255, 255, 255, 0.1); }
-        /* CSS to style the markdown output */
-        #notePreview > *:first-child { margin-top: 0; }
-        #notePreview > *:last-child { margin-bottom: 0; }
-        #notePreview h1, #notePreview h2, #notePreview h3, #notePreview h4 {
-            margin: 0.8em 0 0.4em 0;
-            font-weight: 600;
-            line-height: 1.2;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 0.2em;
-        }
-        #notePreview h1 { font-size: 1.5em; }
-        #notePreview h2 { font-size: 1.3em; }
-        #notePreview h3 { font-size: 1.15em; }
-        #notePreview p { margin-bottom: 0.75rem; line-height: 1.6; }
-        #notePreview ul, #notePreview ol { margin-bottom: 0.75rem; padding-left: 1.75rem; }
-        #notePreview li { margin-bottom: 0.25rem; }
-        #notePreview blockquote {
-            border-left: 4px solid var(--primary-color);
-            padding-left: 1rem;
-            margin: 0 0 0.75rem 0;
-            color: var(--primary-color-light);
-            font-style: italic;
-        }
-        #notePreview pre { background-color: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.75rem; }
-        #notePreview code { font-family: monospace; background-color: rgba(0,0,0,0.2); padding: 0.2rem 0.4rem; border-radius: 0.25rem; }
-        #notePreview pre code { background-color: transparent; padding: 0; }
+        .notes-content { min-height: 80px; background: rgba(40, 30, 60, 0.5); padding: 0.75rem; border-radius: 0.5rem; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .notes-content > *:first-child { margin-top: 0; }
+        .notes-content > *:last-child { margin-bottom: 0; }
+        .notes-content h1, .notes-content h2, .notes-content h3, .notes-content h4 { margin: 0.8em 0 0.4em 0; font-weight: 600; line-height: 1.2; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.2em; }
+        .notes-content h1 { font-size: 1.5em; }
+        .notes-content h2 { font-size: 1.3em; }
+        .notes-content h3 { font-size: 1.15em; }
+        .notes-content p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .notes-content ul, .notes-content ol { margin-bottom: 0.75rem; padding-left: 1.75rem; }
+        .notes-content li { margin-bottom: 0.25rem; }
+        .notes-content blockquote { border-left: 4px solid var(--primary-color); padding-left: 1rem; margin: 0 0 0.75rem 0; color: var(--primary-color-light); font-style: italic; }
+        .notes-content pre { background-color: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.75rem; }
+        .notes-content code { font-family: monospace; background-color: rgba(0,0,0,0.2); padding: 0.2rem 0.4rem; border-radius: 0.25rem; }
+        .notes-content pre code { background-color: transparent; padding: 0; }
     </style>
 </head>
-<body class="gradient-bg text-white overflow-hidden h-screen">
+<body class="text-white overflow-hidden h-screen">
 
 <div id="app" class="min-h-screen flex flex-col items-center pt-8 pb-24 overflow-y-auto h-full">
     <header class="w-full max-w-md px-4 flex justify-between items-center mb-6">
@@ -230,6 +218,10 @@
                         </div>
                     </div>
                 </div>
+                <div>
+                     <p class="mb-2 text-primary-light font-semibold">Nota Geral <span class="font-light text-sm">(Opcional)</span></p>
+                     <textarea id="habitGeneralNote" placeholder="Notas gerais sobre o hábito..." rows="3" class="w-full bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-primary"></textarea>
+                </div>
             </div>
 
             <div class="flex space-x-4 mt-8">
@@ -246,7 +238,7 @@
     <div class="modal-content glass-effect w-full max-w-md p-6 rounded-2xl shadow-2xl">
         <h2 class="text-xl font-bold mb-2 text-center">Escolha um Ícone</h2>
         <p class="text-center text-slate-400 mb-4 text-sm">Cole seu emoji abaixo ou escolha uma sugestão.</p>
-        <input type="text" id="emojiInput" maxlength="2" placeholder="✨" class="w-full text-center text-4xl bg-slate-900/70 p-2 rounded-lg mb-4 focus:outline-none focus:ring-2 ring-primary">
+        <input type="text" id="emojiInput" maxlength="2" placeholder="✨" class="w-full text-center text-4xl bg-slate-900/70 p-2 rounded-lg mb-4 focus:outline-none focus:ring-2 focus-ring-primary">
         <div id="iconGrid" class="grid grid-cols-6 gap-4 max-h-48 overflow-y-auto border-t border-slate-700 pt-4"></div>
         <button id="confirmIconBtn" class="w-full mt-4 bg-primary font-bold py-2 rounded-xl control-btn active:scale-95">Confirmar</button>
     </div>
@@ -257,9 +249,11 @@
     <div id="settingsModalContent" class="modal-content glass-effect w-full max-w-md p-6 rounded-t-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
         <h2 class="text-2xl font-bold mb-6 text-center">Configurações</h2>
         
+        <div id="overallStatsContainer" class="mb-8"></div>
+
         <div class="mb-6">
             <p class="mb-3 text-primary-light font-semibold">Cor do Tema</p>
-            <div id="colorSwatches" class="flex justify-center gap-4 items-center"></div>
+            <div id="colorSwatches" class="flex justify-center gap-4 flex-wrap items-center"></div>
             <button id="resetColorBtn" class="w-full mt-4 bg-slate-600 hover:bg-slate-700 font-bold py-2 rounded-xl control-btn active:scale-95 text-sm">Restaurar Cor Padrão</button>
         </div>
 
@@ -277,7 +271,7 @@
 </div>
 
 <!-- Habit Detail View -->
-<div id="habitDetailView" class="fixed inset-0 bg-[#120c1f] z-[60] transition-transform duration-500 ease-in-out p-4 pt-8 flex flex-col" style="transform: translateX(100%);">
+<div id="habitDetailView" class="fixed inset-0 bg-var(--bg-color) z-[60] transition-transform duration-500 ease-in-out p-4 pt-8 flex flex-col" style="transform: translateX(100%);">
     <header class="flex items-center mb-6 px-2">
         <button id="closeDetailViewBtn" aria-label="Voltar" class="text-2xl p-2 mr-2 text-slate-300 hover:text-white control-btn"><i class="fas fa-arrow-left"></i></button>
         <div id="detailIcon" class="text-3xl mr-4"></div>
@@ -286,6 +280,7 @@
     </header>
     <div class="flex-grow overflow-y-auto pb-8">
         <div id="detailLogTodayContainer" class="glass-effect p-6 rounded-2xl mb-6 mx-2"></div>
+        <div id="generalNoteContainer" class="glass-effect p-6 rounded-2xl mx-2 mt-6 mb-8 hidden"></div>
         <div id="calendarContainer" class="glass-effect p-6 rounded-2xl mb-6 mx-2"></div>
         <div id="statsContainer" class="glass-effect p-6 rounded-2xl mx-2"></div>
         <div id="notesSectionContainer" class="glass-effect p-6 rounded-2xl mx-2 mt-6 mb-8"></div>
@@ -294,10 +289,9 @@
 
 <!-- Service Worker Script -->
 <script id="sw-script" type="text/service-worker">
-    const CACHE_NAME = 'habitx-cache-v2';
-    // Adicione a raiz do seu site à lista de cache, caso seja diferente de '/'
+    const CACHE_NAME = 'habitx-cache-v3';
     const URLS_TO_CACHE = [
-      './', // Ou o caminho para seu arquivo HTML
+      './', 
       'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
       'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
       'https://cdn.tailwindcss.com',
@@ -337,7 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const swBlob = new Blob([document.getElementById('sw-script').textContent], { type: 'application/javascript' });
             const swUrl = URL.createObjectURL(swBlob);
-            // CORREÇÃO: Adicionado o objeto de opções com o escopo para corrigir o erro do 'blob:null'.
             navigator.serviceWorker.register(swUrl, { scope: './' })
                 .then(reg => console.log('Service Worker: Registrado com sucesso', reg.scope))
                 .catch(err => console.error('Service Worker: Falha no Registro', err));
@@ -384,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailLogTodayContainer = document.getElementById('detailLogTodayContainer');
     const calendarContainer = document.getElementById('calendarContainer');
     const statsContainer = document.getElementById('statsContainer');
+    const generalNoteContainer = document.getElementById('generalNoteContainer');
     const notesSectionContainer = document.getElementById('notesSectionContainer');
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
@@ -393,9 +387,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportDataBtn = document.getElementById('exportDataBtn');
     const importDataBtn = document.getElementById('importDataBtn');
     const importFileInput = document.getElementById('importFileInput');
+    const overallStatsContainer = document.getElementById('overallStatsContainer');
     
     // --- State ---
-    let habits = JSON.parse(localStorage.getItem('habitsV6')) || [];
+    let habits = JSON.parse(localStorage.getItem('habitsV7')) || [];
     let selectedDate = new Date();
     let currentEditId = null;
     let activeDetailHabit = null;
@@ -406,10 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Constants ---
     const ICONS = ['🎯', '📚', '💧', '🧘', '🏃', '🏋️', '🥦', '😴', '✍️', '📅', '🎨', '🎵', '🧹', '💰', '🧑‍💻', '🎮', '❤️', '🗣️', '🚶', '🌱', '☀️', '⭐', '💡', '🔑'];
     const WEEKDAYS_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-    const THEME_COLORS = {
-        default: '#8b5cf6', blue: '#3b82f6', green: '#22c55e',
-        red: '#ef4444', orange: '#f97316', pink: '#ec4899',
-    };
+    const THEME_COLORS = { default: '#8b5cf6', blue: '#3b82f6', green: '#22c55e', red: '#ef4444', orange: '#f97316', pink: '#ec4899' };
 
     // --- Utils ---
     const toISODateString = date => new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
@@ -417,6 +409,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const hexToRgb = hex => {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+    };
+    const hexToHsl = (H) => {
+        let r = 0, g = 0, b = 0;
+        if (H.length == 4) { r = "0x" + H[1] + H[1]; g = "0x" + H[2] + H[2]; b = "0x" + H[3] + H[3]; } 
+        else if (H.length == 7) { r = "0x" + H[1] + H[2]; g = "0x" + H[3] + H[4]; b = "0x" + H[5] + H[6]; }
+        r /= 255; g /= 255; b /= 255;
+        let cmin = Math.min(r,g,b), cmax = Math.max(r,g,b), delta = cmax - cmin, h = 0, s = 0, l = 0;
+        if (delta == 0) h = 0;
+        else if (cmax == r) h = ((g - b) / delta) % 6;
+        else if (cmax == g) h = (b - r) / delta + 2;
+        else h = (r - g) / delta + 4;
+        h = Math.round(h * 60);
+        if (h < 0) h += 360;
+        l = (cmax + cmin) / 2;
+        s = delta == 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+        s = +(s * 100).toFixed(1);
+        l = +(l * 100).toFixed(1);
+        return {h, s, l};
     };
     
     // --- Date & Swipe Logic ---
@@ -437,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     };
     const handleSwipe = () => {
+        if (habitDetailView.style.transform === 'translateX(0px)') return;
         const deltaX = touchEndX - touchStartX;
         const deltaY = touchEndY - touchStartY;
         if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
@@ -508,9 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const end = habit.endTime ? new Date(`${dateStr}T${habit.endTime}`) : null;
                 if (end && end <= start) end.setDate(end.getDate() + 1);
 
-                if (now >= start && (!end || now <= end)) {
-                    sections.happening.push(habit); return;
-                }
+                if (now >= start && (!end || now <= end)) { sections.happening.push(habit); return; }
             }
             if (habit.startTime) sections.scheduled.push(habit);
             else sections.daily.push(habit);
@@ -545,12 +554,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const offset = c - (progress.percentage / 100) * c;
         const timeInfo = habit.startTime ? `<span class="ml-2 text-xs bg-primary/20 px-2 py-1 rounded-md">${habit.endTime ? `${habit.startTime} - ${habit.endTime}` : habit.startTime}</span>` : '';
         
-        // CORREÇÃO: Lógica para o conteúdo do círculo
         let circleContent = '';
         if (isCompleted) {
             circleContent = '<i class="fas fa-check"></i>';
-        } else if (progress.percentage > 0) {
-            // Mostra a porcentagem se não estiver completo mas tiver algum progresso
+        } else if (habit.type === 'measurable' && progress.value > 0) {
+            circleContent = `<span class="text-sm font-bold">${progress.value}</span>`;
+        } else if (progress.percentage > 0 && habit.type !== 'yes_no') {
             circleContent = `<span class="text-xs font-bold">${Math.round(progress.percentage)}</span>`;
         }
 
@@ -566,12 +575,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="w-12 h-12 relative flex-shrink-0 flex items-center justify-center ml-2">
                     <svg class="w-full h-full" viewBox="0 0 44 44">
                         <circle class="habit-progress-circle-bg" cx="22" cy="22" r="${r}" fill="none" stroke-width="4"></circle>
-                        <circle class="habit-progress-circle-fg ${isCompleted ? 'completed' : ''}" cx="22" cy="22" r="${r}" fill="none" stroke-width="4" stroke-linecap="round" style="stroke-dasharray: ${c}; stroke-dashoffset: ${offset};" transform="rotate(-90 22 22)"></circle>
+                        <circle class="habit-progress-circle-fg ${isCompleted ? 'completed' : ''}" cx="22" cy="22" r="${r}" fill="none" stroke-width="4" stroke-linecap="round" style="stroke-dasharray: ${c}; stroke-dashoffset: ${c};" data-offset="${offset}" transform="rotate(-90 22 22)"></circle>
                     </svg>
                     <div class="absolute text-white text-lg flex items-center justify-center w-full h-full">${circleContent}</div>
                 </div>
             </div>`;
     };
+    
+    const triggerCircleAnimations = (container) => {
+         setTimeout(() => {
+            container.querySelectorAll('.habit-progress-circle-fg').forEach(circle => {
+                circle.style.strokeDashoffset = circle.dataset.offset;
+            });
+        }, 50);
+    }
 
     const getHabitProgress = (habit, dateStr) => {
         const entry = habit.history?.[dateStr] || { value: 0, completed: false, note: '' };
@@ -581,7 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'measurable': const goal = habit.goal || 1; p = Math.min((entry.value / goal) * 100, 100); text = `${entry.value} / ${goal} ${habit.unit || ''}`; if (p >= 100) text = `🎉 Concluído!`; break;
             case 'timed': const timeGoal = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal; p = timeGoal > 0 ? Math.min((entry.value / timeGoal) * 100, 100) : 0; text = `${Math.floor(entry.value||0)} / ${timeGoal} min`; if (p >= 100) text = `🎉 Concluído!`; break;
         }
-        return { percentage: p, value: entry.value || 0, text, completed: entry.completed || p >= 100, note: entry.note };
+        return { percentage: p, value: parseFloat(entry.value) || 0, text, completed: entry.completed || p >= 100, note: entry.note };
     };
 
     const updateOverallProgress = (habitsForDay, date) => {
@@ -595,14 +612,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const avgProgress = habitsForDay.length === 0 ? 0 : habitsForDay.reduce((sum, h) => sum + getHabitProgress(h, toISODateString(date)).percentage, 0) / habitsForDay.length;
         setOverallProgress(avgProgress);
+        triggerCircleAnimations(habitListContainer);
     };
 
     function setOverallProgress(percent) {
         const r = overallProgressCircle.r.baseVal.value;
         const c = r * 2 * Math.PI;
         const p = Math.max(0, Math.min(100, percent));
-        overallProgressCircle.style.strokeDashoffset = c - (p / 100) * c;
-        overallPercentage.textContent = `${Math.round(p)}%`;
+        const offset = c - (p / 100) * c;
+        setTimeout(() => { 
+             overallProgressCircle.style.strokeDashoffset = offset;
+             overallPercentage.textContent = `${Math.round(p)}%`;
+        }, 50);
     }
 
     // --- Modal & View Logic ---
@@ -618,9 +639,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEditId = habit?.id || null;
         modalTitle.textContent = habit ? 'Editar Hábito' : 'Novo Hábito';
         deleteBtn.classList.toggle('hidden', !habit);
-        const data = { icon: '🎯', name: '', frequency: 'daily', weekdays: [], type: 'yes_no', goal: 1, unit: 'vezes', timeGoal: 60, timeUnit: 'minutes', date: toISODateString(selectedDate), startTime: '', endTime: '', ...(habit || {}) };
+        const data = { icon: '🎯', name: '', frequency: 'daily', weekdays: [], type: 'yes_no', goal: 1, unit: '', timeGoal: 60, timeUnit: 'minutes', date: toISODateString(selectedDate), startTime: '', endTime: '', generalNote: '', ...(habit || {}) };
         Object.keys(data).forEach(key => {
-            const el = document.getElementById({name: 'habitName', icon: 'habitIcon', goal: 'habitGoal', unit: 'habitUnit', timeGoal: 'habitTimeGoal', timeUnit: 'habitTimeUnit', date: 'eventDate', startTime: 'startTime', endTime: 'endTime'}[key]);
+            const el = document.getElementById({name: 'habitName', icon: 'habitIcon', goal: 'habitGoal', unit: 'habitUnit', timeGoal: 'habitTimeGoal', timeUnit: 'habitTimeUnit', date: 'eventDate', startTime: 'startTime', endTime: 'endTime', generalNote: 'habitGeneralNote'}[key]);
             if (el) el.value = data[key];
         });
         openIconModalBtn.textContent = data.icon;
@@ -633,9 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
         iconGrid.innerHTML = ICONS.map(icon => `<button type="button" aria-label="${icon}" class="icon-btn text-3xl p-2 rounded-lg hover:bg-primary/50 control-btn">${icon}</button>`).join('');
         iconGrid.querySelectorAll('.icon-btn').forEach(btn => btn.onclick = () => { emojiInput.value = btn.textContent; updateIconSelection(); });
     };
-    const updateIconSelection = () => {
-        if(emojiInput.value) { habitIconInput.value = openIconModalBtn.textContent = emojiInput.value; }
-    };
+    const updateIconSelection = () => { if(emojiInput.value) { habitIconInput.value = openIconModalBtn.textContent = emojiInput.value; } };
     
     const populateWeekdays = () => {
         customWeekdaysContainer.innerHTML = WEEKDAYS_SHORT.map((day, i) => `<button type="button" data-day="${i}" class="weekday-btn control-btn w-9 h-9 flex items-center justify-center rounded-full bg-slate-900/70">${day}</button>`).join('');
@@ -674,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openDetailView = (habit) => {
         activeDetailHabit = habit;
         updateDetailViewUI();
+        habitDetailView.style.background = getComputedStyle(document.documentElement).getPropertyValue('--bg-color');
         habitDetailView.style.transform = 'translateX(0)';
         appContainer.classList.add('modal-open');
     };
@@ -690,6 +710,15 @@ document.addEventListener('DOMContentLoaded', () => {
         detailLogTodayContainer.innerHTML = getDetailLogHTML();
         calendarContainer.innerHTML = getDetailCalendarHTML();
         statsContainer.innerHTML = getDetailStatsHTML();
+        statsContainer.style.display = activeDetailHabit.frequency === 'none' ? 'none' : 'block';
+
+        if(activeDetailHabit.generalNote) {
+            generalNoteContainer.classList.remove('hidden');
+            generalNoteContainer.innerHTML = `<h3 class="font-bold text-lg mb-2">Nota Geral</h3><div class="notes-content">${marked.parse(activeDetailHabit.generalNote)}</div>`;
+        } else {
+            generalNoteContainer.classList.add('hidden');
+        }
+
         setupNotesSection();
         setupDetailViewListeners();
         updateDetailProgressCircle();
@@ -699,10 +728,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateStr = toISODateString(selectedDate);
         const dateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
         notesSectionContainer.innerHTML = `
-            <h3 class="font-bold text-lg mb-2">Notas (${dateText})</h3>
+            <h3 class="font-bold text-lg mb-2">Nota de ${dateText}</h3>
             <div id="notesEditor" class="relative">
-                <textarea id="habitNoteTextarea" class="w-full bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 ring-primary hidden" placeholder="Adicione suas notas aqui... (suporta Markdown)"></textarea>
-                <div id="notePreview" class="cursor-pointer"></div>
+                <textarea id="habitNoteTextarea" class="w-full bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-primary hidden" placeholder="Adicione suas notas aqui... (suporta Markdown)"></textarea>
+                <div id="notePreview" class="notes-content cursor-pointer"></div>
             </div>`;
         const textarea = document.getElementById('habitNoteTextarea');
         const preview = document.getElementById('notePreview');
@@ -710,18 +739,12 @@ document.addEventListener('DOMContentLoaded', () => {
         textarea.value = currentNote;
         preview.innerHTML = marked.parse(currentNote || '<span class="text-slate-500">Clique para adicionar uma nota.</span>');
         
-        const showEditor = () => { textarea.classList.remove('hidden'); preview.classList.add('hidden'); textarea.focus(); autoResizeTextarea(textarea); };
+        const showEditor = () => { textarea.classList.remove('hidden'); preview.classList.add('hidden'); textarea.focus(); };
         const showPreview = () => { textarea.classList.add('hidden'); preview.classList.remove('hidden'); };
         
-        const autoResizeTextarea = (el) => {
-            el.style.height = 'auto';
-            el.style.height = (el.scrollHeight) + 'px';
-        };
-
         preview.addEventListener('click', showEditor);
         textarea.addEventListener('blur', showPreview);
         textarea.addEventListener('input', () => {
-            autoResizeTextarea(textarea); // Auto-resize on input
             const noteValue = textarea.value;
             preview.innerHTML = marked.parse(noteValue || '<span class="text-slate-500">Clique para adicionar uma nota.</span>');
             const habitIndex = habits.findIndex(h => h.id === activeDetailHabit.id);
@@ -730,7 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!habits[habitIndex].history[dateStr]) habits[habitIndex].history[dateStr] = { value: 0, completed: false, note: '' };
                 habits[habitIndex].history[dateStr].note = noteValue;
                 activeDetailHabit = habits[habitIndex];
-                localStorage.setItem('habitsV6', JSON.stringify(habits)); 
+                localStorage.setItem('habitsV7', JSON.stringify(habits)); 
             }
         });
     };
@@ -741,8 +764,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentProgress = getHabitProgress(activeDetailHabit, toISODateString(selectedDate));
             updateHabitProgress(id, toISODateString(selectedDate), 0, !currentProgress.completed, true);
         });
-        document.getElementById('detailPlusBtn')?.addEventListener('click', () => handleDetailInteractionUpdate(1));
-        document.getElementById('detailMinusBtn')?.addEventListener('click', () => handleDetailInteractionUpdate(-1));
+
+        if (activeDetailHabit.type === 'measurable') {
+            const textContainer = document.getElementById('detailProgressText');
+            textContainer.addEventListener('click', makeMeasurableEditable);
+        }
 
         if (activeDetailHabit.type === 'timed') {
             updateTimerDisplayState();
@@ -752,6 +778,29 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.quick-add-btn').forEach(btn => btn.onclick = () => addTimeToHabit(parseInt(btn.dataset.minutes)));
         }
     };
+    
+    function makeMeasurableEditable() {
+        const textContainer = document.getElementById('detailProgressText');
+        const habit = activeDetailHabit;
+        if (!textContainer || !habit || textContainer.querySelector('input')) return;
+        const currentProgress = getHabitProgress(habit, toISODateString(selectedDate));
+        
+        textContainer.innerHTML = `<input type="number" id="detailMeasureInput" inputmode="decimal" class="w-3/4 bg-transparent text-white text-4xl font-bold text-center outline-none" value="${currentProgress.value}">`;
+        
+        const input = document.getElementById('detailMeasureInput');
+        input.focus();
+        input.select();
+
+        const saveValue = () => {
+            const newValue = parseFloat(input.value) || 0;
+            updateHabitProgress(habit.id, toISODateString(selectedDate), newValue, null, true);
+        };
+        
+        input.addEventListener('blur', saveValue);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') input.blur();
+        });
+    }
 
     function createDetailProgressCircleHTML(progress, habit) {
         const isCompleted = progress.percentage >= 100;
@@ -767,7 +816,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <circle class="stroke-current text-gray-700/50" cx="66" cy="66" r="${r}" fill="none" stroke-width="12"></circle>
                 <circle id="detailProgressCircle" class="progress-ring-circle detail-progress-circle ${isCompleted ? 'completed' : 'in-progress'}" cx="66" cy="66" r="${r}" fill="none" stroke-width="12" stroke-linecap="round" style="stroke-dasharray: ${c}; stroke-dashoffset: ${offset};"></circle>
             </svg>
-            <div id="detailProgressText" class="absolute inset-0 flex flex-col items-center justify-center text-center">${innerTextHTML}</div>
+            <div id="detailProgressText" class="absolute inset-0 flex flex-col items-center justify-center text-center cursor-pointer">${innerTextHTML}</div>
         </div>`;
     }
 
@@ -788,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let controlsHTML = '';
         switch (habit.type) {
             case 'yes_no': controlsHTML = `<button id="detailToggleBtn" class="w-full ${progress.completed ? 'bg-slate-600 hover:bg-slate-700' : 'bg-primary'} text-white font-bold py-3 rounded-xl text-lg control-btn active:scale-95">${progress.completed ? 'Desmarcar' : 'Concluir'}</button>`; break;
-            case 'measurable': controlsHTML = `<div class="flex justify-center items-center space-x-4"><button id="detailMinusBtn" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl control-btn active:scale-90">-</button><input id="detailMeasureInput" type="number" step="any" min="0" class="w-20 text-center bg-slate-800/70 rounded-lg p-2 text-lg text-white border border-primary focus:outline-none" value="${progress.value}"><button id="detailPlusBtn" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl control-btn active:scale-90">+</button></div>`; break;
+            case 'measurable': controlsHTML = `<p class="text-center text-slate-400 text-sm">Toque no valor acima para editar.</p>`; break;
             case 'timed':
                 const isGoalReached = progress.percentage >= 100;
                 const quickAdd = [1, 5, 10, 15, 30].map(min => `<button data-minutes="${min}" class="quick-add-btn flex-1 bg-primary/20 p-3 rounded-lg control-btn text-sm">+${min} min</button>`).join('');
@@ -815,67 +864,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getDetailStatsHTML() {
-        const habit = activeDetailHabit;
-        if (!habit || habit.frequency === 'none') return ''; 
-        
+        if (!activeDetailHabit || activeDetailHabit.frequency === 'none') return '';
+        const stats = calculateStreakAndTotal(activeDetailHabit);
+        return `<h3 class="font-bold text-lg mb-4">Estatísticas do Hábito</h3>
+            <div class="grid grid-cols-3 gap-x-4 gap-y-6 text-center">
+                <div><p class="text-3xl font-bold">🔥 ${stats.currentStreak}</p><p class="text-sm text-primary-light">Sequência Atual</p></div>
+                <div><p class="text-3xl font-bold">🏆 ${stats.maxStreak}</p><p class="text-sm text-primary-light">Melhor Sequência</p></div>
+                <div><p class="text-3xl font-bold">✅ ${stats.totalCompleted}</p><p class="text-sm text-primary-light">Total Concluído</p></div>
+            </div>`;
+    }
+
+    function calculateStreakAndTotal(habit) {
         const history = habit.history || {};
         const completedDates = Object.keys(history)
             .filter(date => history[date].completed)
             .map(date => new Date(date + 'T00:00:00')) // Avoid timezone issues
-            .sort((a, b) => b - a); // Sort descending
+            .sort((a, b) => b - a);
 
-        let currentStreak = 0;
-        let maxStreak = 0;
-        let tempStreak = 0;
+        let currentStreak = 0, maxStreak = 0, tempStreak = 0;
         
         if (completedDates.length > 0) {
-            // Calculate Max Streak
             for (let i = 0; i < completedDates.length; i++) {
                 tempStreak++;
                 const currentDate = completedDates[i];
                 const prevDate = completedDates[i + 1];
                 if (prevDate) {
                     const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
-                    if (diff > 1) {
-                        maxStreak = Math.max(maxStreak, tempStreak);
-                        tempStreak = 0;
-                    }
+                    if (diff > 1) { maxStreak = Math.max(maxStreak, tempStreak); tempStreak = 0; }
                 }
             }
             maxStreak = Math.max(maxStreak, tempStreak);
 
-            // Calculate Current Streak
             const today = new Date(new Date().toDateString());
             const yesterday = new Date(today);
             yesterday.setDate(today.getDate() - 1);
-
             const latestCompletion = completedDates[0];
+
             if (latestCompletion.getTime() === today.getTime() || latestCompletion.getTime() === yesterday.getTime()) {
                 currentStreak = 1;
                 for (let i = 0; i < completedDates.length - 1; i++) {
                     const diff = (completedDates[i] - completedDates[i + 1]) / (1000 * 60 * 60 * 24);
-                    if (diff === 1) {
-                        currentStreak++;
-                    } else {
-                        break;
-                    }
+                    if (diff === 1) currentStreak++;
+                    else break;
                 }
             }
         }
-        
-        return `
-            <h3 class="font-bold text-lg mb-4">Estatísticas</h3>
-            <div class="grid grid-cols-3 gap-x-4 gap-y-6 text-center">
-                <div><p class="text-3xl font-bold">🔥 ${currentStreak}</p><p class="text-sm text-primary-light">Sequência Atual</p></div>
-                <div><p class="text-3xl font-bold">🏆 ${maxStreak}</p><p class="text-sm text-primary-light">Melhor Sequência</p></div>
-                <div><p class="text-3xl font-bold">✅ ${completedDates.length}</p><p class="text-sm text-primary-light">Total Concluído</p></div>
-            </div>`;
+        return { currentStreak, maxStreak, totalCompleted: completedDates.length };
     }
-
-    const handleDetailInteractionUpdate = (change) => {
-        const currentProgress = getHabitProgress(activeDetailHabit, toISODateString(selectedDate));
-        updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), Math.max(0, currentProgress.value + change), null, true);
-    };
 
     // --- Timer Functions ---
     const updateTimerDisplayState = () => {
@@ -927,7 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Data Persistence ---
     const saveHabits = (shouldRender = true) => {
-        localStorage.setItem('habitsV6', JSON.stringify(habits));
+        localStorage.setItem('habitsV7', JSON.stringify(habits));
         if (shouldRender) renderViewForDate(selectedDate);
         if (activeDetailHabit) {
             const updated = habits.find(h => h.id === activeDetailHabit.id);
@@ -947,7 +982,7 @@ document.addEventListener('DOMContentLoaded', () => {
              const timeGoal = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
              if (habit.type === 'measurable') isCompleted = value >= goal;
              else if (habit.type === 'timed') isCompleted = value >= timeGoal;
-             else isCompleted = entry.completed; // yes_no type
+             else isCompleted = entry.completed;
         }
         habit.history[dateStr] = { value, completed: isCompleted, note: entry.note };
         if (activeDetailHabit?.id === id) activeDetailHabit = { ...habit };
@@ -964,35 +999,69 @@ document.addEventListener('DOMContentLoaded', () => {
         const habitToUpdate = habits.find(h=>h.id===id);
         if(!habitToUpdate) return;
         
-        item.outerHTML = createHabitItemHTML(habitToUpdate, dateStr);
-        // Re-add listener to new element
+        const newHTML = createHabitItemHTML(habitToUpdate, dateStr);
+        item.outerHTML = newHTML;
+        
         const newItem = habitListContainer.querySelector(`.habit-item[data-id="${id}"]`);
         if (newItem) {
             newItem.addEventListener('click', () => openDetailView(habits.find(h=>h.id===id)));
+            triggerCircleAnimations(newItem);
         }
     };
 
     // --- Settings & Theme ---
     const applyThemeColor = (color) => {
         const root = document.documentElement.style;
-        const rgb = hexToRgb(color);
-        if (!rgb) return;
+        const hsl = hexToHsl(color);
+        if (!hsl) return;
+        
+        const darkBgColor = `hsl(${hsl.h}, 30%, 8%)`;
+        root.setProperty('--bg-color', darkBgColor);
         root.setProperty('--primary-color', color);
+        const rgb = hexToRgb(color);
         root.setProperty('--primary-color-dark', `rgb(${Math.round(rgb.r*0.9)}, ${Math.round(rgb.g*0.9)}, ${Math.round(rgb.b*0.9)})`);
-        root.setProperty('--primary-color-light', `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`);
+        root.setProperty('--primary-color-light', color);
         root.setProperty('--primary-color-hover-bg', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`);
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', color);
+        
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', darkBgColor);
         document.querySelectorAll('.color-swatch').forEach(sw => sw.classList.toggle('active', sw.dataset.color === color));
     };
     const saveAndApplyThemeColor = (color) => { localStorage.setItem('appThemeColor', color); applyThemeColor(color); };
+    
+    function calculateOverallStats() {
+        const allCompletedDates = new Set();
+        let totalCompletions = 0;
+        
+        habits.forEach(habit => {
+            if(habit.frequency === 'none') return; // Don't include single events in stats
+            Object.entries(habit.history || {}).forEach(([date, entry]) => {
+                if (entry.completed) {
+                    allCompletedDates.add(date);
+                    totalCompletions++;
+                }
+            });
+        });
+
+        const sortedDates = Array.from(allCompletedDates).map(d => new Date(d + 'T00:00:00')).sort((a,b) => b - a);
+        const stats = calculateStreakAndTotal({ history: { _dummy: true }, completedDates: sortedDates }); // Adapt function
+        
+        overallStatsContainer.innerHTML = `
+            <h3 class="font-bold text-lg mb-4 text-center text-primary-light">Estatísticas Gerais</h3>
+            <div class="grid grid-cols-3 gap-x-4 gap-y-6 text-center">
+                <div><p class="text-3xl font-bold">🔥 ${stats.currentStreak}</p><p class="text-sm text-slate-400">Sequência de Dias</p></div>
+                <div><p class="text-3xl font-bold">🏆 ${stats.maxStreak}</p><p class="text-sm text-slate-400">Melhor Sequência</p></div>
+                <div><p class="text-3xl font-bold">✅ ${totalCompletions}</p><p class="text-sm text-slate-400">Total de Hábitos Concluídos</p></div>
+            </div>`;
+    }
+
+    // --- Data Import/Export ---
     const exportData = () => {
-        const data = { habits, settings: { themeColor: localStorage.getItem('appThemeColor') || THEME_COLORS.default } };
+        const data = { habits: habits, settings: { themeColor: localStorage.getItem('appThemeColor') || THEME_COLORS.default } };
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}));
         a.download = `habitx_backup_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(a.href);
-        alert('Dados exportados!');
     };
     const importData = (e) => {
         const file = e.target.files[0];
@@ -1002,12 +1071,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const data = JSON.parse(ev.target.result);
                 if (!Array.isArray(data.habits)) throw new Error('Formato de arquivo inválido.');
-                if (!confirm('Isto irá sobrescrever os hábitos existentes com os dados do arquivo. Deseja continuar?')) { importFileInput.value = ''; return; }
-                
-                habits = data.habits; // Replace habits
+                habits = data.habits;
                 if (data.settings?.themeColor) saveAndApplyThemeColor(data.settings.themeColor);
                 saveHabits();
-                alert('Dados importados com sucesso!');
                 closeModal(settingsModal);
             } catch (err) { alert(`Erro ao importar: ${err.message}`); } finally { importFileInput.value = ''; }
         };
@@ -1026,13 +1092,10 @@ document.addEventListener('DOMContentLoaded', () => {
     addHabitBtn.addEventListener('click', () => openEditModal());
     cancelBtn.addEventListener('click', () => closeModal(habitModal));
     returnToTodayBtn.addEventListener('click', () => {
-        // CORREÇÃO: Cálculo correto da diferença de dias
         const today = new Date(toISODateString(new Date()));
         const current = new Date(toISODateString(selectedDate));
         const diffDays = Math.round((today - current) / (1000 * 60 * 60 * 24));
-        if (diffDays !== 0) {
-            changeDate(diffDays);
-        }
+        if (diffDays !== 0) changeDate(diffDays);
     });
     openIconModalBtn.addEventListener('click', () => { emojiInput.value = habitIconInput.value; openModal(iconModal); });
     emojiInput.addEventListener('input', updateIconSelection);
@@ -1055,25 +1118,23 @@ document.addEventListener('DOMContentLoaded', () => {
             weekdays: Array.from(customWeekdaysContainer.querySelectorAll('.weekday-btn[data-selected="true"]')).map(b => parseInt(b.dataset.day)),
             type: document.getElementById('habitType').value,
             goal: parseFloat(document.getElementById('habitGoal').value) || 1,
-            unit: document.getElementById('habitUnit').value.trim() || 'vezes',
+            unit: document.getElementById('habitUnit').value.trim() || '',
             timeGoal: parseFloat(document.getElementById('habitTimeGoal').value) || 60,
             timeUnit: document.getElementById('habitTimeUnit').value,
             date: document.getElementById('eventDate').value || null,
             startTime: startTimeInput.value || null,
             endTime: endTimeInput.value || null,
+            generalNote: document.getElementById('habitGeneralNote').value.trim() || '',
             history: currentEditId ? habits.find(h => h.id === currentEditId).history || {} : {}
         };
         const existingIndex = habits.findIndex(h => h.id === currentEditId);
-        if (existingIndex > -1) {
-            habits[existingIndex] = data;
-        } else {
-            habits.push(data);
-        }
+        if (existingIndex > -1) habits[existingIndex] = data;
+        else habits.push(data);
         saveHabits();
         closeModal(habitModal);
     });
     deleteBtn.addEventListener('click', () => {
-        if (currentEditId && confirm('Tem certeza que deseja excluir este hábito? Esta ação é irreversível.')) {
+        if (currentEditId) {
             const detailOpen = activeDetailHabit?.id === currentEditId;
             habits = habits.filter(h => h.id !== currentEditId);
             saveHabits();
@@ -1081,7 +1142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (detailOpen) closeDetailView();
         }
     });
-    settingsBtn.addEventListener('click', () => openModal(settingsModal));
+    settingsBtn.addEventListener('click', () => { calculateOverallStats(); openModal(settingsModal); });
     closeSettingsBtn.addEventListener('click', () => closeModal(settingsModal));
     exportDataBtn.addEventListener('click', exportData);
     importDataBtn.addEventListener('click', () => importFileInput.click());
@@ -1091,16 +1152,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initial Load ---
     const init = () => {
         const savedColor = localStorage.getItem('appThemeColor') || THEME_COLORS.default;
-        colorSwatchesContainer.innerHTML = Object.values(THEME_COLORS).map(c => `<div class="color-swatch" data-color="${c}" style="background-color: ${c};"></div>`).join('');
+        
+        let colorHTML = Object.values(THEME_COLORS).map(c => `<div class="color-swatch" data-color="${c}" style="background-color: ${c};"></div>`).join('');
+        colorHTML += `<div><input type="color" id="colorPickerInput" value="${savedColor}"></div>`;
+        colorSwatchesContainer.innerHTML = colorHTML;
+
         document.querySelectorAll('.color-swatch').forEach(sw => sw.addEventListener('click', () => saveAndApplyThemeColor(sw.dataset.color)));
+        document.getElementById('colorPickerInput').addEventListener('input', (e) => saveAndApplyThemeColor(e.target.value));
+
         applyThemeColor(savedColor);
-        marked.setOptions({ gfm: true, breaks: true, sanitize: false }); // sanitize: false is needed for some styles but be careful if user can share notes
+        marked.setOptions({ gfm: true, breaks: true, sanitize: true });
         populateIconGrid();
         populateWeekdays();
         selectFrequency('daily');
         selectHabitType('yes_no');
         renderViewForDate(selectedDate);
-        realTimeUpdateInterval = setInterval(checkRealTimeUpdates, 60000); // Check every minute
+        realTimeUpdateInterval = setInterval(checkRealTimeUpdates, 60000);
     };
     init();
 });
