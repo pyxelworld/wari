@@ -662,13 +662,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const radius = 20;
             const circumference = 2 * Math.PI * radius;
             const offset = circumference - (progress.percentage / 100) * circumference;
-            
+
             let timeInfo = '';
             if(habit.startTime){
                 const timeText = habit.endTime ? `${habit.startTime} - ${habit.endTime}` : habit.startTime;
                 timeInfo = `<span class="ml-2 text-xs bg-purple-900/50 px-2 py-1 rounded-md">${timeText}</span>`;
             }
 
+            // Calcula o ângulo para o círculo pequeno (sentido horário começando de cima)
+            // O círculo SVG começa em 3h, então precisamos rotacionar o círculo para 12h (cima)
+            // Adiciona transform="rotate(-90 22 22)" ao círculo de progresso
             return `
                 <div class="habit-item glass-effect p-4 rounded-2xl flex items-center justify-between cursor-pointer" data-id="${habit.id}">
                     <div class="flex items-center flex-1 min-w-0">
@@ -681,13 +684,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="w-12 h-12 relative flex-shrink-0 flex items-center justify-center ml-2">
                         <svg class="w-full h-full" viewBox="0 0 44 44">
                             <circle class="habit-progress-circle-bg" cx="22" cy="22" r="${radius}" fill="none" stroke-width="4"></circle>
-                            <circle class="habit-progress-circle-fg ${isCompleted ? 'completed' : ''}" cx="22" cy="22" r="${radius}" fill="none" stroke-width="4" stroke-linecap="round" style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};"></circle>
+                            <circle class="habit-progress-circle-fg ${isCompleted ? 'completed' : ''}" cx="22" cy="22" r="${radius}" fill="none" stroke-width="4" stroke-linecap="round" style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};" transform="rotate(-90 22 22)"></circle>
                         </svg>
                         <div class="absolute text-white text-lg">${isCompleted ? '<i class="fas fa-check"></i>' : ''}</div>
                     </div>
                 </div>`;
         }).join('');
-        
         return `<div class="px-4 mb-6"><h3 class="text-lg font-semibold text-purple-300 mb-3">${title}</h3><div class="space-y-3">${habitHTML}</div></div>`;
     };
     
@@ -1016,11 +1018,11 @@ function getDetailLogHTML() {
     const dateStr = toISODateString(selectedDate);
     const progress = getHabitProgress(habit, dateStr);
     const dateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
-    
+
     let controlsHTML = '';
 
     const headerHTML = `<h3 class="font-bold text-lg mb-2">Progresso para <span class="text-purple-300">${dateText}</span></h3>`;
-    const circleHTML = createDetailProgressCircleHTML(progress, habit); // Circle HTML generated here
+    const circleHTML = createDetailProgressCircleHTML(progress, habit);
 
     switch (habit.type) {
         case 'yes_no':
@@ -1030,6 +1032,7 @@ function getDetailLogHTML() {
             controlsHTML = `
                 <div class="flex justify-center items-center space-x-4">
                     <button id="detailMinusBtn" aria-label="Diminuir progresso" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl font-light control-btn active:scale-90">-</button>
+                    <input id="detailMeasureInput" type="number" step="any" min="0" class="w-20 text-center bg-slate-800/70 rounded-lg p-2 text-lg text-white border border-purple-400 focus:outline-none" value="${progress.value}">
                     <button id="detailPlusBtn" aria-label="Aumentar progresso" class="w-16 h-16 rounded-full bg-slate-700/50 text-3xl font-light control-btn active:scale-90">+</button>
                 </div>`;
             break;
