@@ -105,6 +105,9 @@
         .notes-content pre { background-color: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.75rem; }
         .notes-content code { font-family: monospace; background-color: rgba(0,0,0,0.2); padding: 0.2rem 0.4rem; border-radius: 0.25rem; }
         .notes-content pre code { background-color: transparent; padding: 0; }
+        .note-scope-btn { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; border: 1px solid transparent; transition: all 0.2s ease; }
+        .note-scope-btn.active { background-color: var(--primary-color); border-color: var(--primary-color-light); color: white; }
+        .note-scope-btn:not(.active) { background-color: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body class="text-white overflow-hidden h-screen">
@@ -219,8 +222,8 @@
                     </div>
                 </div>
                 <div>
-                     <p class="mb-2 text-primary-light font-semibold">Nota Geral <span class="font-light text-sm">(Opcional)</span></p>
-                     <textarea id="habitGeneralNote" placeholder="Notas gerais sobre o hábito..." rows="3" class="w-full bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-primary"></textarea>
+                     <p class="mb-2 text-primary-light font-semibold">Nota Geral do Hábito <span class="font-light text-sm">(Opcional)</span></p>
+                     <textarea id="habitGeneralNote" placeholder="Esta nota aparecerá em todos os dias do hábito..." rows="3" class="w-full bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-primary"></textarea>
                 </div>
             </div>
 
@@ -280,16 +283,15 @@
     </header>
     <div class="flex-grow overflow-y-auto pb-8">
         <div id="detailLogTodayContainer" class="glass-effect p-6 rounded-2xl mb-6 mx-2"></div>
-        <div id="generalNoteContainer" class="glass-effect p-6 rounded-2xl mx-2 mt-6 mb-8 hidden"></div>
+        <div id="notesSectionContainer" class="glass-effect p-6 rounded-2xl mx-2 mt-6 mb-8"></div>
         <div id="calendarContainer" class="glass-effect p-6 rounded-2xl mb-6 mx-2"></div>
         <div id="statsContainer" class="glass-effect p-6 rounded-2xl mx-2"></div>
-        <div id="notesSectionContainer" class="glass-effect p-6 rounded-2xl mx-2 mt-6 mb-8"></div>
     </div>
 </div>
 
 <!-- Service Worker Script -->
 <script id="sw-script" type="text/service-worker">
-    const CACHE_NAME = 'habitx-cache-v3';
+    const CACHE_NAME = 'habitx-cache-v4';
     const URLS_TO_CACHE = [
       './', 
       'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
@@ -377,7 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailLogTodayContainer = document.getElementById('detailLogTodayContainer');
     const calendarContainer = document.getElementById('calendarContainer');
     const statsContainer = document.getElementById('statsContainer');
-    const generalNoteContainer = document.getElementById('generalNoteContainer');
     const notesSectionContainer = document.getElementById('notesSectionContainer');
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
@@ -390,18 +391,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const overallStatsContainer = document.getElementById('overallStatsContainer');
     
     // --- State ---
-    let habits = JSON.parse(localStorage.getItem('habitsV7')) || [];
+    let habits = JSON.parse(localStorage.getItem('habitsV8')) || [];
     let selectedDate = new Date();
     let currentEditId = null;
-    let activeDetailHabit = null;
+    let activeDetailHabit = null; // Stores the raw habit object {id, history, versions}
     let touchStartX = 0, touchEndX = 0, touchStartY = 0, touchEndY = 0;
     let timerInterval = null, sessionStartTime = 0, realTimeUpdateInterval = null;
     let isTimerRunning = false;
+    let currentNoteScope = 'day'; // 'day' or 'general'
     
     // --- Constants ---
     const ICONS = ['🎯', '📚', '💧', '🧘', '🏃', '🏋️', '🥦', '😴', '✍️', '📅', '🎨', '🎵', '🧹', '💰', '🧑‍💻', '🎮', '❤️', '🗣️', '🚶', '🌱', '☀️', '⭐', '💡', '🔑'];
     const WEEKDAYS_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
     const THEME_COLORS = { default: '#8b5cf6', blue: '#3b82f6', green: '#22c55e', red: '#ef4444', orange: '#f97316', pink: '#ec4899' };
+    const DB_KEY = 'habitsV8';
 
     // --- Utils ---
     const toISODateString = date => new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
@@ -427,6 +430,16 @@ document.addEventListener('DOMContentLoaded', () => {
         s = +(s * 100).toFixed(1);
         l = +(l * 100).toFixed(1);
         return {h, s, l};
+    };
+
+    // --- Habit Versioning Logic ---
+    const getHabitVersionForDate = (habit, date) => {
+        if (!habit || !habit.versions || habit.versions.length === 0) return {};
+        const dateStr = toISODateString(date);
+        const applicableVersions = habit.versions
+            .filter(v => v.effectiveDate <= dateStr)
+            .sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate));
+        return applicableVersions[0] || habit.versions[0];
     };
     
     // --- Date & Swipe Logic ---
@@ -489,16 +502,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const isHabitActiveOnDate = (habit, date) => {
-        const freq = habit.frequency || 'daily';
+        const version = getHabitVersionForDate(habit, date);
+        if (!version.frequency) return false;
+
         const dateStr = toISODateString(date);
-        if (freq === 'none') return habit.date === dateStr;
-        if (habit.startDate && dateStr < habit.startDate) return false;
-        return freq === 'daily' || (freq === 'custom' && habit.weekdays.includes(date.getDay()));
+        if (version.frequency === 'none') return version.date === dateStr;
+        
+        const habitStartDate = habit.versions[0]?.effectiveDate;
+        if (habitStartDate && dateStr < habitStartDate) return false;
+
+        return version.frequency === 'daily' || (version.frequency === 'custom' && version.weekdays.includes(date.getDay()));
     };
 
     const renderHabits = (date) => {
         const dateStr = toISODateString(date);
         const allActiveHabitsForDay = habits.filter(h => isHabitActiveOnDate(h, date));
+        
         if (allActiveHabitsForDay.length === 0) {
             habitListContainer.innerHTML = `<div class="text-center text-primary-light py-10 glass-effect rounded-2xl mx-4"><p class="text-lg">Sem hábitos para hoje.</p><p class="text-sm mt-2">Adicione um novo no botão '+' acima!</p></div>`;
             updateOverallProgress(allActiveHabitsForDay, date);
@@ -510,22 +529,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
 
         allActiveHabitsForDay.forEach(habit => {
+            const version = getHabitVersionForDate(habit, date);
             if (getHabitProgress(habit, dateStr).completed) {
                 sections.completed.push(habit);
                 return;
             }
-            if (isToday && habit.startTime) {
-                const start = new Date(`${dateStr}T${habit.startTime}`);
-                const end = habit.endTime ? new Date(`${dateStr}T${habit.endTime}`) : null;
+            if (isToday && version.startTime) {
+                const start = new Date(`${dateStr}T${version.startTime}`);
+                const end = version.endTime ? new Date(`${dateStr}T${version.endTime}`) : null;
                 if (end && end <= start) end.setDate(end.getDate() + 1);
 
                 if (now >= start && (!end || now <= end)) { sections.happening.push(habit); return; }
             }
-            if (habit.startTime) sections.scheduled.push(habit);
+            if (version.startTime) sections.scheduled.push(habit);
             else sections.daily.push(habit);
         });
-
-        sections.scheduled.sort((a, b) => a.startTime.localeCompare(b.startTime));
+        
+        const sortFn = (a, b) => {
+            const versionA = getHabitVersionForDate(a, date);
+            const versionB = getHabitVersionForDate(b, date);
+            return versionA.startTime.localeCompare(versionB.startTime);
+        };
+        sections.scheduled.sort(sortFn);
         
         habitListContainer.innerHTML = [
             createHabitSection('Acontecendo Agora', sections.happening, dateStr),
@@ -548,27 +573,29 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const createHabitItemHTML = (habit, dateStr) => {
+        const date = new Date(dateStr + 'T12:00:00');
+        const version = getHabitVersionForDate(habit, date);
         const progress = getHabitProgress(habit, dateStr);
         const isCompleted = progress.percentage >= 100;
         const r = 20, c = 2 * Math.PI * r;
         const offset = c - (progress.percentage / 100) * c;
-        const timeInfo = habit.startTime ? `<span class="ml-2 text-xs bg-primary/20 px-2 py-1 rounded-md">${habit.endTime ? `${habit.startTime} - ${habit.endTime}` : habit.startTime}</span>` : '';
+        const timeInfo = version.startTime ? `<span class="ml-2 text-xs bg-primary/20 px-2 py-1 rounded-md">${version.endTime ? `${version.startTime} - ${version.endTime}` : version.startTime}</span>` : '';
         
         let circleContent = '';
         if (isCompleted) {
             circleContent = '<i class="fas fa-check"></i>';
-        } else if (habit.type === 'measurable' && progress.value > 0) {
+        } else if (version.type === 'measurable' && progress.value > 0) {
             circleContent = `<span class="text-sm font-bold">${progress.value}</span>`;
-        } else if (progress.percentage > 0 && habit.type !== 'yes_no') {
+        } else if (progress.percentage > 0 && version.type !== 'yes_no') {
             circleContent = `<span class="text-xs font-bold">${Math.round(progress.percentage)}</span>`;
         }
 
         return `
             <div class="habit-item glass-effect p-4 rounded-2xl flex items-center justify-between cursor-pointer" data-id="${habit.id}">
                 <div class="flex items-center flex-1 min-w-0">
-                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center text-xl mr-4">${habit.icon || '🎯'}</div>
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center text-xl mr-4">${version.icon || '🎯'}</div>
                     <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-white truncate">${habit.name}</p>
+                        <p class="font-semibold text-white truncate">${version.name}</p>
                         <p class="text-sm text-primary-light flex items-center">${progress.text} ${timeInfo}</p>
                     </div>
                 </div>
@@ -591,12 +618,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const getHabitProgress = (habit, dateStr) => {
+        const date = new Date(dateStr + 'T12:00:00');
+        const version = getHabitVersionForDate(habit, date);
         const entry = habit.history?.[dateStr] || { value: 0, completed: false, note: '' };
         let p = 0, text = 'Pendente';
-        switch (habit.type) {
+        
+        switch (version.type) {
             case 'yes_no': p = entry.completed ? 100 : 0; text = entry.completed ? 'Concluído!' : 'Pendente'; break;
-            case 'measurable': const goal = habit.goal || 1; p = Math.min((entry.value / goal) * 100, 100); text = `${entry.value} / ${goal} ${habit.unit || ''}`; if (p >= 100) text = `🎉 Concluído!`; break;
-            case 'timed': const timeGoal = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal; p = timeGoal > 0 ? Math.min((entry.value / timeGoal) * 100, 100) : 0; text = `${Math.floor(entry.value||0)} / ${timeGoal} min`; if (p >= 100) text = `🎉 Concluído!`; break;
+            case 'measurable': const goal = version.goal || 1; p = Math.min((entry.value / goal) * 100, 100); text = `${entry.value} / ${goal} ${version.unit || ''}`; if (p >= 100) text = `🎉 Concluído!`; break;
+            case 'timed': const timeGoal = version.timeUnit === 'hours' ? version.timeGoal * 60 : version.timeGoal; p = timeGoal > 0 ? Math.min((entry.value / timeGoal) * 100, 100) : 0; text = `${Math.floor(entry.value||0)} / ${timeGoal} min`; if (p >= 100) text = `🎉 Concluído!`; break;
         }
         return { percentage: p, value: parseFloat(entry.value) || 0, text, completed: entry.completed || p >= 100, note: entry.note };
     };
@@ -637,13 +667,30 @@ document.addEventListener('DOMContentLoaded', () => {
         habitForm.reset();
         endTimeInput.setCustomValidity('');
         currentEditId = habit?.id || null;
+        
+        const version = habit ? getHabitVersionForDate(habit, selectedDate) : {};
+        
         modalTitle.textContent = habit ? 'Editar Hábito' : 'Novo Hábito';
         deleteBtn.classList.toggle('hidden', !habit);
-        const data = { icon: '🎯', name: '', frequency: 'daily', weekdays: [], type: 'yes_no', goal: 1, unit: '', timeGoal: 60, timeUnit: 'minutes', date: toISODateString(selectedDate), startTime: '', endTime: '', generalNote: '', ...(habit || {}) };
-        Object.keys(data).forEach(key => {
-            const el = document.getElementById({name: 'habitName', icon: 'habitIcon', goal: 'habitGoal', unit: 'habitUnit', timeGoal: 'habitTimeGoal', timeUnit: 'habitTimeUnit', date: 'eventDate', startTime: 'startTime', endTime: 'endTime', generalNote: 'habitGeneralNote'}[key]);
-            if (el) el.value = data[key];
-        });
+        
+        const data = { 
+            icon: '🎯', name: '', frequency: 'daily', weekdays: [], type: 'yes_no', 
+            goal: 1, unit: '', timeGoal: 60, timeUnit: 'minutes', 
+            date: toISODateString(selectedDate), startTime: '', endTime: '', generalNote: '',
+            ...version
+        };
+        
+        document.getElementById('habitName').value = data.name;
+        document.getElementById('habitIcon').value = data.icon;
+        document.getElementById('habitGoal').value = data.goal;
+        document.getElementById('habitUnit').value = data.unit;
+        document.getElementById('habitTimeGoal').value = data.timeGoal;
+        document.getElementById('habitTimeUnit').value = data.timeUnit;
+        document.getElementById('eventDate').value = data.date;
+        document.getElementById('startTime').value = data.startTime;
+        document.getElementById('endTime').value = data.endTime;
+        document.getElementById('habitGeneralNote').value = data.generalNote;
+
         openIconModalBtn.textContent = data.icon;
         selectHabitType(data.type);
         selectFrequency(data.frequency, data.weekdays);
@@ -705,20 +752,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const updateDetailViewUI = () => {
         if (!activeDetailHabit) return;
-        detailIcon.textContent = activeDetailHabit.icon || '🎯';
-        detailHabitName.textContent = activeDetailHabit.name;
+        const version = getHabitVersionForDate(activeDetailHabit, selectedDate);
+        detailIcon.textContent = version.icon || '🎯';
+        detailHabitName.textContent = version.name;
         detailLogTodayContainer.innerHTML = getDetailLogHTML();
         calendarContainer.innerHTML = getDetailCalendarHTML();
         statsContainer.innerHTML = getDetailStatsHTML();
-        statsContainer.style.display = activeDetailHabit.frequency === 'none' ? 'none' : 'block';
-
-        if(activeDetailHabit.generalNote) {
-            generalNoteContainer.classList.remove('hidden');
-            generalNoteContainer.innerHTML = `<h3 class="font-bold text-lg mb-2">Nota Geral</h3><div class="notes-content">${marked.parse(activeDetailHabit.generalNote)}</div>`;
-        } else {
-            generalNoteContainer.classList.add('hidden');
-        }
-
+        statsContainer.style.display = version.frequency === 'none' ? 'none' : 'block';
+        
         setupNotesSection();
         setupDetailViewListeners();
         updateDetailProgressCircle();
@@ -726,51 +767,113 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setupNotesSection = () => {
         const dateStr = toISODateString(selectedDate);
-        const dateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+        const version = getHabitVersionForDate(activeDetailHabit, selectedDate);
+        
         notesSectionContainer.innerHTML = `
-            <h3 class="font-bold text-lg mb-2">Nota de ${dateText}</h3>
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-lg">Nota</h3>
+                <div id="noteScopeContainer" class="flex items-center gap-2">
+                    <button id="noteScopeDay" data-scope="day" class="note-scope-btn">Dia</button>
+                    <button id="noteScopeGeneral" data-scope="general" class="note-scope-btn">Geral</button>
+                </div>
+            </div>
             <div id="notesEditor" class="relative">
-                <textarea id="habitNoteTextarea" class="w-full bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-primary hidden" placeholder="Adicione suas notas aqui... (suporta Markdown)"></textarea>
+                <textarea id="habitNoteTextarea" class="w-full bg-slate-800/60 p-3 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus-ring-primary hidden" rows="4"></textarea>
                 <div id="notePreview" class="notes-content cursor-pointer"></div>
             </div>`;
+
+        const dailyNote = activeDetailHabit.history?.[dateStr]?.note || '';
+        const generalNote = version.generalNote || '';
+
+        // Precedence: if a daily note exists, default to it. Otherwise, default to general.
+        currentNoteScope = dailyNote ? 'day' : 'general';
+
         const textarea = document.getElementById('habitNoteTextarea');
         const preview = document.getElementById('notePreview');
-        const currentNote = activeDetailHabit.history?.[dateStr]?.note || '';
-        textarea.value = currentNote;
-        preview.innerHTML = marked.parse(currentNote || '<span class="text-slate-500">Clique para adicionar uma nota.</span>');
+        const dayBtn = document.getElementById('noteScopeDay');
+        const generalBtn = document.getElementById('noteScopeGeneral');
+
+        const updateNoteView = (scope) => {
+            currentNoteScope = scope;
+            dayBtn.classList.toggle('active', scope === 'day');
+            generalBtn.classList.toggle('active', scope === 'general');
+            
+            const text = scope === 'day' ? dailyNote : generalNote;
+            const placeholder = scope === 'day' 
+                ? 'Adicione uma nota para este dia...' 
+                : 'Adicione uma nota geral para o hábito...';
+            
+            textarea.value = text;
+            textarea.placeholder = placeholder;
+            preview.innerHTML = marked.parse(text || `<span class="text-slate-500">Clique para adicionar uma nota ${scope === 'day' ? 'para o dia' : 'geral'}.</span>`);
+        };
         
+        dayBtn.onclick = () => updateNoteView('day');
+        generalBtn.onclick = () => updateNoteView('general');
+
         const showEditor = () => { textarea.classList.remove('hidden'); preview.classList.add('hidden'); textarea.focus(); };
         const showPreview = () => { textarea.classList.add('hidden'); preview.classList.remove('hidden'); };
         
         preview.addEventListener('click', showEditor);
-        textarea.addEventListener('blur', showPreview);
+        textarea.addEventListener('blur', () => {
+            showPreview();
+            handleNoteSave();
+        });
         textarea.addEventListener('input', () => {
             const noteValue = textarea.value;
-            preview.innerHTML = marked.parse(noteValue || '<span class="text-slate-500">Clique para adicionar uma nota.</span>');
-            const habitIndex = habits.findIndex(h => h.id === activeDetailHabit.id);
-            if (habitIndex > -1) {
-                if (!habits[habitIndex].history) habits[habitIndex].history = {};
-                if (!habits[habitIndex].history[dateStr]) habits[habitIndex].history[dateStr] = { value: 0, completed: false, note: '' };
-                habits[habitIndex].history[dateStr].note = noteValue;
-                activeDetailHabit = habits[habitIndex];
-                localStorage.setItem('habitsV7', JSON.stringify(habits)); 
-            }
+            preview.innerHTML = marked.parse(noteValue);
         });
+
+        updateNoteView(currentNoteScope);
+    };
+
+    const handleNoteSave = () => {
+        const noteValue = document.getElementById('habitNoteTextarea').value;
+        const habitIndex = habits.findIndex(h => h.id === activeDetailHabit.id);
+        if (habitIndex === -1) return;
+        
+        if (currentNoteScope === 'day') {
+            const dateStr = toISODateString(selectedDate);
+            if (!habits[habitIndex].history) habits[habitIndex].history = {};
+            if (!habits[habitIndex].history[dateStr]) habits[habitIndex].history[dateStr] = { value: 0, completed: false };
+            habits[habitIndex].history[dateStr].note = noteValue;
+            activeDetailHabit.history = habits[habitIndex].history;
+        } else { // general note
+            const effectiveDate = toISODateString(selectedDate);
+            const rawHabit = habits[habitIndex];
+            const previousVersion = getHabitVersionForDate(rawHabit, selectedDate);
+            
+            // If the general note is unchanged, do nothing.
+            if(previousVersion.generalNote === noteValue) return;
+
+            let versionForToday = rawHabit.versions.find(v => v.effectiveDate === effectiveDate);
+
+            if (versionForToday) {
+                versionForToday.generalNote = noteValue;
+            } else {
+                const newVersion = { ...previousVersion, generalNote: noteValue, effectiveDate };
+                rawHabit.versions.push(newVersion);
+                rawHabit.versions.sort((a,b) => a.effectiveDate.localeCompare(b.effectiveDate));
+            }
+            activeDetailHabit.versions = rawHabit.versions;
+        }
+        
+        saveHabits();
     };
 
     const setupDetailViewListeners = () => {
-        const id = activeDetailHabit.id;
         document.getElementById('detailToggleBtn')?.addEventListener('click', () => {
             const currentProgress = getHabitProgress(activeDetailHabit, toISODateString(selectedDate));
-            updateHabitProgress(id, toISODateString(selectedDate), 0, !currentProgress.completed, true);
+            updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), 0, !currentProgress.completed, true);
         });
 
-        if (activeDetailHabit.type === 'measurable') {
+        const version = getHabitVersionForDate(activeDetailHabit, selectedDate);
+        if (version.type === 'measurable') {
             const textContainer = document.getElementById('detailProgressText');
             textContainer.addEventListener('click', makeMeasurableEditable);
         }
 
-        if (activeDetailHabit.type === 'timed') {
+        if (version.type === 'timed') {
             updateTimerDisplayState();
             document.getElementById('startPauseTimerBtn').onclick = () => isTimerRunning ? pauseTimer(true) : startTimer();
             document.getElementById('resetProgressBtn').onclick = resetTimedProgress;
@@ -781,10 +884,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function makeMeasurableEditable() {
         const textContainer = document.getElementById('detailProgressText');
-        const habit = activeDetailHabit;
-        if (!textContainer || !habit || textContainer.querySelector('input')) return;
-        const currentProgress = getHabitProgress(habit, toISODateString(selectedDate));
-        
+        if (!textContainer || !activeDetailHabit || textContainer.querySelector('input')) return;
+
+        const currentProgress = getHabitProgress(activeDetailHabit, toISODateString(selectedDate));
         textContainer.innerHTML = `<input type="number" id="detailMeasureInput" inputmode="decimal" class="w-3/4 bg-transparent text-white text-4xl font-bold text-center outline-none" value="${currentProgress.value}">`;
         
         const input = document.getElementById('detailMeasureInput');
@@ -793,7 +895,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const saveValue = () => {
             const newValue = parseFloat(input.value) || 0;
-            updateHabitProgress(habit.id, toISODateString(selectedDate), newValue, null, true);
+            updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), newValue, null, true);
         };
         
         input.addEventListener('blur', saveValue);
@@ -802,14 +904,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function createDetailProgressCircleHTML(progress, habit) {
+    function createDetailProgressCircleHTML(progress, version) {
         const isCompleted = progress.percentage >= 100;
         const r = 60, c = 2 * Math.PI * r, offset = c;
         let innerTextHTML = '';
-        switch (habit.type) {
+        switch (version.type) {
             case 'yes_no': innerTextHTML = isCompleted ? `<i class="fas fa-check text-6xl"></i>` : `<i class="fas fa-times text-6xl text-slate-500"></i>`; break;
-            case 'measurable': innerTextHTML = `<span class="text-4xl font-bold">${progress.value}</span><span class="text-slate-400 mt-1">/ ${habit.goal} ${habit.unit || ''}</span>`; break;
-            case 'timed': const goal = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal; innerTextHTML = `<span class="text-4xl font-bold tracking-wider">${formatTime((progress.value || 0) * 60)}</span><span class="text-slate-400 text-sm mt-1">/ ${goal} min</span>`; break;
+            case 'measurable': innerTextHTML = `<span class="text-4xl font-bold">${progress.value}</span><span class="text-slate-400 mt-1">/ ${version.goal} ${version.unit || ''}</span>`; break;
+            case 'timed': const goal = version.timeUnit === 'hours' ? version.timeGoal * 60 : version.timeGoal; innerTextHTML = `<span class="text-4xl font-bold tracking-wider">${formatTime((progress.value || 0) * 60)}</span><span class="text-slate-400 text-sm mt-1">/ ${goal} min</span>`; break;
         }
         return `<div class="relative w-48 h-48 mx-auto mb-6">
             <svg class="w-full h-full" viewBox="0 0 132 132">
@@ -832,10 +934,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getDetailLogHTML() {
-        const habit = activeDetailHabit, dateStr = toISODateString(selectedDate), progress = getHabitProgress(habit, dateStr);
+        const dateStr = toISODateString(selectedDate);
+        const version = getHabitVersionForDate(activeDetailHabit, selectedDate);
+        const progress = getHabitProgress(activeDetailHabit, dateStr);
         const dateText = selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
         let controlsHTML = '';
-        switch (habit.type) {
+        switch (version.type) {
             case 'yes_no': controlsHTML = `<button id="detailToggleBtn" class="w-full ${progress.completed ? 'bg-slate-600 hover:bg-slate-700' : 'bg-primary'} text-white font-bold py-3 rounded-xl text-lg control-btn active:scale-95">${progress.completed ? 'Desmarcar' : 'Concluir'}</button>`; break;
             case 'measurable': controlsHTML = `<p class="text-center text-slate-400 text-sm">Toque no valor acima para editar.</p>`; break;
             case 'timed':
@@ -845,18 +949,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${!isGoalReached ? `<p class="text-xs text-center mb-2 text-slate-400">Ajuste rápido:</p><div class="flex gap-2 justify-center h-12">${quickAdd}<button id="completeTimedHabitBtn" title="Completar Meta" class="h-full flex items-center justify-center bg-green-500/80 hover:bg-green-500 rounded-lg control-btn text-white px-4"><i class="fas fa-check"></i></button></div>` : ''}`;
                 break;
         }
-        return `<h3 class="font-bold text-lg mb-2">Progresso em <span class="text-primary-light">${dateText}</span></h3>${createDetailProgressCircleHTML(progress, habit)}<div>${controlsHTML}</div>`;
+        return `<h3 class="font-bold text-lg mb-2">Progresso em <span class="text-primary-light">${dateText}</span></h3>${createDetailProgressCircleHTML(progress, version)}<div>${controlsHTML}</div>`;
     }
 
     function getDetailCalendarHTML() {
-        const habit = activeDetailHabit, viewDate = new Date(selectedDate);
+        const viewDate = new Date(selectedDate);
         const year = viewDate.getFullYear(), month = viewDate.getMonth();
         const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month + 1, 0).getDate();
         let daysHTML = Array(firstDay).fill('<div></div>').join('');
         for(let day=1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
-            if (!isHabitActiveOnDate(habit, date)) { daysHTML += `<div class="opacity-30">${day}</div>`; continue; }
-            const completed = getHabitProgress(habit, toISODateString(date)).completed;
+            if (!isHabitActiveOnDate(activeDetailHabit, date)) { daysHTML += `<div class="opacity-30">${day}</div>`; continue; }
+            const completed = getHabitProgress(activeDetailHabit, toISODateString(date)).completed;
             const isSelected = toISODateString(date) === toISODateString(selectedDate);
             daysHTML += `<div class="calendar-day w-9 h-9 flex items-center justify-center rounded-full text-sm ${completed ? 'completed' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${!completed ? 'border border-slate-700' : ''}">${day}</div>`;
         }
@@ -864,7 +968,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getDetailStatsHTML() {
-        if (!activeDetailHabit || activeDetailHabit.frequency === 'none') return '';
+        const version = getHabitVersionForDate(activeDetailHabit, selectedDate);
+        if (!activeDetailHabit || version.frequency === 'none') return '';
         const stats = calculateStreakAndTotal(activeDetailHabit);
         return `<h3 class="font-bold text-lg mb-4">Estatísticas do Hábito</h3>
             <div class="grid grid-cols-3 gap-x-4 gap-y-6 text-center">
@@ -877,48 +982,83 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateStreakAndTotal(habit) {
         const history = habit.history || {};
         const completedDates = Object.keys(history)
-            .filter(date => history[date].completed)
+            .filter(dateStr => {
+                const date = new Date(dateStr + 'T12:00:00');
+                return history[dateStr].completed && isHabitActiveOnDate(habit, date);
+            })
             .map(date => new Date(date + 'T00:00:00')) // Avoid timezone issues
             .sort((a, b) => b - a);
 
-        let currentStreak = 0, maxStreak = 0, tempStreak = 0;
+        let currentStreak = 0, maxStreak = 0;
         
         if (completedDates.length > 0) {
-            for (let i = 0; i < completedDates.length; i++) {
-                tempStreak++;
+            let tempStreak = 1;
+            maxStreak = 1;
+
+            for (let i = 0; i < completedDates.length - 1; i++) {
                 const currentDate = completedDates[i];
-                const prevDate = completedDates[i + 1];
-                if (prevDate) {
-                    const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
-                    if (diff > 1) { maxStreak = Math.max(maxStreak, tempStreak); tempStreak = 0; }
+                let expectedPrevDate = new Date(currentDate);
+                let diff = 0;
+
+                // Find the actual previous active day
+                let foundPrevActiveDay = false;
+                for (let d = 1; d < 8; d++) { // Check up to a week back
+                    expectedPrevDate.setDate(currentDate.getDate() - d);
+                    if (isHabitActiveOnDate(habit, expectedPrevDate)) {
+                        diff = (currentDate - completedDates[i+1]) / (1000 * 60 * 60 * 24);
+                        if (diff === d) {
+                           foundPrevActiveDay = true;
+                        }
+                        break;
+                    }
+                }
+                
+                if (foundPrevActiveDay) {
+                    tempStreak++;
+                } else {
+                    maxStreak = Math.max(maxStreak, tempStreak);
+                    tempStreak = 1;
                 }
             }
             maxStreak = Math.max(maxStreak, tempStreak);
-
+            
             const today = new Date(new Date().toDateString());
-            const yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
-            const latestCompletion = completedDates[0];
+            let latestCompletion = completedDates[0];
+            
+            let isTodayOrYesterdayActive = false;
+            if (isHabitActiveOnDate(habit, today) && latestCompletion.getTime() === today.getTime()){
+                 isTodayOrYesterdayActive = true;
+            } else {
+                 let yesterday = new Date(today);
+                 yesterday.setDate(today.getDate() - 1);
+                 while(!isHabitActiveOnDate(habit, yesterday)){
+                     yesterday.setDate(yesterday.getDate() - 1);
+                 }
+                 if(latestCompletion.getTime() === yesterday.getTime()){
+                     isTodayOrYesterdayActive = true;
+                 }
+            }
 
-            if (latestCompletion.getTime() === today.getTime() || latestCompletion.getTime() === yesterday.getTime()) {
-                currentStreak = 1;
-                for (let i = 0; i < completedDates.length - 1; i++) {
-                    const diff = (completedDates[i] - completedDates[i + 1]) / (1000 * 60 * 60 * 24);
-                    if (diff === 1) currentStreak++;
-                    else break;
-                }
+            if (isTodayOrYesterdayActive) {
+                currentStreak = maxStreak;
             }
         }
         return { currentStreak, maxStreak, totalCompleted: completedDates.length };
     }
 
+
     // --- Timer Functions ---
     const updateTimerDisplayState = () => {
-        if (!activeDetailHabit || activeDetailHabit.type !== 'timed') return;
+        if (!activeDetailHabit) return;
+        const version = getHabitVersionForDate(activeDetailHabit, selectedDate);
+        if (version.type !== 'timed') return;
+
         const btn = document.getElementById('startPauseTimerBtn');
         if (!btn) return;
-        const goal = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
+        
+        const goal = version.timeUnit === 'hours' ? version.timeGoal * 60 : version.timeGoal;
         const isGoalReached = (getHabitProgress(activeDetailHabit, toISODateString(selectedDate)).value || 0) >= goal;
+        
         btn.disabled = isGoalReached;
         if (isGoalReached) { btn.innerHTML = '<i class="fas fa-check mr-2"></i>Concluído'; if(isTimerRunning) pauseTimer(true); } 
         else { btn.innerHTML = isTimerRunning ? '<i class="fas fa-pause mr-2"></i> Pausar' : '<i class="fas fa-play mr-2"></i> Iniciar'; }
@@ -956,13 +1096,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const completeTimedHabit = () => {
         if (isTimerRunning) pauseTimer(false);
-        const goal = activeDetailHabit.timeUnit === 'hours' ? activeDetailHabit.timeGoal * 60 : activeDetailHabit.timeGoal;
+        const version = getHabitVersionForDate(activeDetailHabit, selectedDate);
+        const goal = version.timeUnit === 'hours' ? version.timeGoal * 60 : version.timeGoal;
         updateHabitProgress(activeDetailHabit.id, toISODateString(selectedDate), goal, true, true);
     };
 
     // --- Data Persistence ---
     const saveHabits = (shouldRender = true) => {
-        localStorage.setItem('habitsV7', JSON.stringify(habits));
+        localStorage.setItem(DB_KEY, JSON.stringify(habits));
         if (shouldRender) renderViewForDate(selectedDate);
         if (activeDetailHabit) {
             const updated = habits.find(h => h.id === activeDetailHabit.id);
@@ -976,15 +1117,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const habit = habits[idx];
         if (!habit.history) habit.history = {};
         const entry = habit.history[dateStr] || { value: 0, completed: false, note: '' };
+        
         let isCompleted = completed;
         if (isCompleted === null) {
-             const goal = habit.goal || 1;
-             const timeGoal = habit.timeUnit === 'hours' ? habit.timeGoal * 60 : habit.timeGoal;
-             if (habit.type === 'measurable') isCompleted = value >= goal;
-             else if (habit.type === 'timed') isCompleted = value >= timeGoal;
-             else isCompleted = entry.completed;
+            const version = getHabitVersionForDate(habit, new Date(dateStr + 'T12:00:00'));
+            const goal = version.goal || 1;
+            const timeGoal = version.timeUnit === 'hours' ? version.timeGoal * 60 : version.timeGoal;
+            if (version.type === 'measurable') isCompleted = value >= goal;
+            else if (version.type === 'timed') isCompleted = value >= timeGoal;
+            else isCompleted = entry.completed;
         }
-        habit.history[dateStr] = { value, completed: isCompleted, note: entry.note };
+        
+        habit.history[dateStr] = { ...entry, value, completed: isCompleted };
+
         if (activeDetailHabit?.id === id) activeDetailHabit = { ...habit };
         if (shouldSave) saveHabits();
         else { 
@@ -1029,28 +1174,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveAndApplyThemeColor = (color) => { localStorage.setItem('appThemeColor', color); applyThemeColor(color); };
     
     function calculateOverallStats() {
-        const allCompletedDates = new Set();
+        // This function would need significant rework to be meaningful with versioned habits.
+        // For now, it provides a simple count based on current definitions.
         let totalCompletions = 0;
+        let activeDays = new Set();
         
         habits.forEach(habit => {
-            if(habit.frequency === 'none') return; // Don't include single events in stats
-            Object.entries(habit.history || {}).forEach(([date, entry]) => {
+             Object.entries(habit.history || {}).forEach(([dateStr, entry]) => {
                 if (entry.completed) {
-                    allCompletedDates.add(date);
                     totalCompletions++;
+                    activeDays.add(dateStr);
                 }
             });
         });
-
-        const sortedDates = Array.from(allCompletedDates).map(d => new Date(d + 'T00:00:00')).sort((a,b) => b - a);
-        const stats = calculateStreakAndTotal({ history: { _dummy: true }, completedDates: sortedDates }); // Adapt function
         
         overallStatsContainer.innerHTML = `
-            <h3 class="font-bold text-lg mb-4 text-center text-primary-light">Estatísticas Gerais</h3>
-            <div class="grid grid-cols-3 gap-x-4 gap-y-6 text-center">
-                <div><p class="text-3xl font-bold">🔥 ${stats.currentStreak}</p><p class="text-sm text-slate-400">Sequência de Dias</p></div>
-                <div><p class="text-3xl font-bold">🏆 ${stats.maxStreak}</p><p class="text-sm text-slate-400">Melhor Sequência</p></div>
-                <div><p class="text-3xl font-bold">✅ ${totalCompletions}</p><p class="text-sm text-slate-400">Total de Hábitos Concluídos</p></div>
+            <h3 class="font-bold text-lg mb-4 text-center text-primary-light">Estatísticas Gerais (Simplificado)</h3>
+            <div class="grid grid-cols-2 gap-4 text-center">
+                <div><p class="text-3xl font-bold">🎯 ${totalCompletions}</p><p class="text-sm text-slate-400">Total de Conclusões</p></div>
+                <div><p class="text-3xl font-bold">🗓️ ${activeDays.size}</p><p class="text-sm text-slate-400">Dias Ativos</p></div>
             </div>`;
     }
 
@@ -1073,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!Array.isArray(data.habits)) throw new Error('Formato de arquivo inválido.');
                 habits = data.habits;
                 if (data.settings?.themeColor) saveAndApplyThemeColor(data.settings.themeColor);
-                saveHabits();
+                init(true); // Re-initialize with imported data
                 closeModal(settingsModal);
             } catch (err) { alert(`Erro ao importar: ${err.message}`); } finally { importFileInput.value = ''; }
         };
@@ -1107,32 +1249,59 @@ document.addEventListener('DOMContentLoaded', () => {
     [startTimeInput, endTimeInput].forEach(el => el.addEventListener('input', () => {
         endTimeInput.setCustomValidity(endTimeInput.value && startTimeInput.value && endTimeInput.value < startTimeInput.value ? 'Fim não pode ser antes do início.' : '');
     }));
+    
     habitForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!habitForm.checkValidity()) { habitForm.reportValidity(); return; }
-        const data = {
-            id: currentEditId || Date.now(),
+        
+        const frequency = document.getElementById('habitFrequency').value;
+        const eventDateValue = document.getElementById('eventDate').value;
+        const effectiveDate = frequency === 'none' ? eventDateValue : toISODateString(selectedDate);
+
+        const newVersionData = {
             name: document.getElementById('habitName').value.trim(),
             icon: habitIconInput.value,
-            frequency: document.getElementById('habitFrequency').value,
+            frequency,
             weekdays: Array.from(customWeekdaysContainer.querySelectorAll('.weekday-btn[data-selected="true"]')).map(b => parseInt(b.dataset.day)),
             type: document.getElementById('habitType').value,
             goal: parseFloat(document.getElementById('habitGoal').value) || 1,
             unit: document.getElementById('habitUnit').value.trim() || '',
             timeGoal: parseFloat(document.getElementById('habitTimeGoal').value) || 60,
             timeUnit: document.getElementById('habitTimeUnit').value,
-            date: document.getElementById('eventDate').value || null,
+            date: eventDateValue || null,
             startTime: startTimeInput.value || null,
             endTime: endTimeInput.value || null,
             generalNote: document.getElementById('habitGeneralNote').value.trim() || '',
-            history: currentEditId ? habits.find(h => h.id === currentEditId).history || {} : {}
+            effectiveDate,
         };
-        const existingIndex = habits.findIndex(h => h.id === currentEditId);
-        if (existingIndex > -1) habits[existingIndex] = data;
-        else habits.push(data);
+        
+        if (currentEditId) {
+            const habitIndex = habits.findIndex(h => h.id === currentEditId);
+            const rawHabit = habits[habitIndex];
+            const previousVersion = getHabitVersionForDate(rawHabit, selectedDate);
+            
+            let versionForToday = rawHabit.versions.find(v => v.effectiveDate === effectiveDate);
+            if (versionForToday) {
+                // Update existing version for this day
+                Object.assign(versionForToday, newVersionData);
+            } else {
+                // Create a new version
+                const newVersion = { ...previousVersion, ...newVersionData, effectiveDate };
+                rawHabit.versions.push(newVersion);
+                rawHabit.versions.sort((a,b) => a.effectiveDate.localeCompare(b.effectiveDate));
+            }
+        } else {
+            habits.push({
+                id: Date.now(),
+                history: {},
+                versions: [newVersionData]
+            });
+        }
+
         saveHabits();
         closeModal(habitModal);
     });
+
     deleteBtn.addEventListener('click', () => {
         if (currentEditId) {
             const detailOpen = activeDetailHabit?.id === currentEditId;
@@ -1150,9 +1319,32 @@ document.addEventListener('DOMContentLoaded', () => {
     resetColorBtn.addEventListener('click', () => saveAndApplyThemeColor(THEME_COLORS.default));
 
     // --- Initial Load ---
-    const init = () => {
+    const init = (isImport = false) => {
+        // Migration from old data structure
+        let migrated = false;
+        habits.forEach(habit => {
+            if (!habit.versions) {
+                migrated = true;
+                const { id, history, ...props } = habit;
+                habit.versions = [{
+                    effectiveDate: '2000-01-01', // Represents the beginning of time for this habit
+                    name: props.name || 'Hábito sem nome', icon: props.icon || '🎯',
+                    frequency: props.frequency || 'daily', weekdays: props.weekdays || [],
+                    type: props.type || 'yes_no', goal: props.goal || 1, unit: props.unit || '',
+                    timeGoal: props.timeGoal || 60, timeUnit: props.timeUnit || 'minutes',
+                    date: props.date || null, startTime: props.startTime || null, endTime: props.endTime || null,
+                    generalNote: props.generalNote || ''
+                }];
+                Object.keys(props).forEach(key => delete habit[key]);
+            }
+        });
+
+        if (migrated && !isImport) {
+            console.log("Hábitos migrados para a nova estrutura com versionamento.");
+            saveHabits(false);
+        }
+
         const savedColor = localStorage.getItem('appThemeColor') || THEME_COLORS.default;
-        
         let colorHTML = Object.values(THEME_COLORS).map(c => `<div class="color-swatch" data-color="${c}" style="background-color: ${c};"></div>`).join('');
         colorHTML += `<div><input type="color" id="colorPickerInput" value="${savedColor}"></div>`;
         colorSwatchesContainer.innerHTML = colorHTML;
@@ -1167,6 +1359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectFrequency('daily');
         selectHabitType('yes_no');
         renderViewForDate(selectedDate);
+        if(realTimeUpdateInterval) clearInterval(realTimeUpdateInterval);
         realTimeUpdateInterval = setInterval(checkRealTimeUpdates, 60000);
     };
     init();
